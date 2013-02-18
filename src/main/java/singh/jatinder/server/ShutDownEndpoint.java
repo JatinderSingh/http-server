@@ -38,7 +38,7 @@ import singh.jatinder.server.IEndPoint;
  * Endpoint to shutdown server
  *
  */
-public class ShutDownEndpoint extends RequestHandler implements IEndPoint {
+public abstract class ShutDownEndpoint extends RequestHandler implements IEndPoint {
 
 	public Deferred<HttpResponse> process(ChannelHandlerContext context, HttpRequest request) {
 		HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
@@ -46,8 +46,10 @@ public class ShutDownEndpoint extends RequestHandler implements IEndPoint {
 		response.setContent(ChannelBuffers.copiedBuffer("Accepted ShutDown Request", Charset.defaultCharset()));
 		Deferred<HttpResponse> deferred = new Deferred<HttpResponse>();
 		deferred.callback(response);
+		shutdown();
 		super.doShutdown(context.getChannel());
 		return deferred;
 	}
 
+	public abstract void shutdown();
 }
