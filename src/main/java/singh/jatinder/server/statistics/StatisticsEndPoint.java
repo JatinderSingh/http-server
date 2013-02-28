@@ -19,9 +19,10 @@
  */
 package singh.jatinder.server.statistics;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -42,7 +43,7 @@ import com.stumbleupon.async.Deferred;
  */
 public class StatisticsEndPoint implements IEndPoint {
 	
-	private static final Map<String, ICollector> statistics = new ConcurrentHashMap<String, ICollector>();
+	private static final Map<String, ICollector> statistics = Collections.synchronizedMap(new LinkedHashMap<String, ICollector>());
 	
 	public static void registerStatisticalCollector(String name, ICollector collector) {
 		statistics.put(name, collector);
