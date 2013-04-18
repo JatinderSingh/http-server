@@ -34,6 +34,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,12 +60,15 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 	  private static final DefaultChannelGroup channels =
 	    new DefaultChannelGroup("all");
 
+	  private final AbstractTrafficShapingHandler trafficHandler;
+	  
 	  static void closeAllConnections() {
 	    channels.close().awaitUninterruptibly();
 	  }
 
 	  /** Constructor. */
-	  public ConnectionManager() {
+	  public ConnectionManager(AbstractTrafficShapingHandler trafficShapingHandler) {
+		  this.trafficHandler = trafficShapingHandler;
 	  }
 
 	  @Override
@@ -120,6 +124,16 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 		stats.put("activeBoundedChannels", activeBoundedChannels.get());
 		stats.put("activeChannels", activeChannels.get());
 		stats.put("underProcessRequests", totalRequests.get()-totalResponses.get());
+		stats.put("traffic-CumulativeReadBytes", trafficHandler.getTrafficCounter().getCumulativeReadBytes());
+		stats.put("traffic-CumulativeWrittenBytes", trafficHandler.getTrafficCounter().getCumulativeWrittenBytes());
+		stats.put("traffic-CurrentReadBytes", trafficHandler.getTrafficCounter().getCurrentReadBytes());
+		stats.put("traffic-CurrentWrittenBytes", trafficHandler.getTrafficCounter().getCurrentWrittenBytes());
+		stats.put("traffic-LastReadBytes", trafficHandler.getTrafficCounter().getLastReadBytes());
+		stats.put("traffic-LastWrittenBytes", trafficHandler.getTrafficCounter().getLastWrittenBytes());
+		stats.put("traffic-LastCumulativeTime", trafficHandler.getTrafficCounter().getLastCumulativeTime());
+		stats.put("traffic-LastReadThroughput", trafficHandler.getTrafficCounter().getLastReadThroughput());
+		stats.put("traffic-LastWriteThroughput", trafficHandler.getTrafficCounter().getLastWriteThroughput());
+		stats.put("traffic-LastTime", trafficHandler.getTrafficCounter().getLastTime());
 		return stats;
 	}
 

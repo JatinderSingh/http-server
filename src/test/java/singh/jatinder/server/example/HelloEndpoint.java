@@ -28,9 +28,9 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.stumbleupon.async.Deferred;
-
 import singh.jatinder.server.IEndPoint;
+
+import com.stumbleupon.async.Deferred;
 
 /**
  * @author Jatinder
@@ -47,6 +47,5 @@ public class HelloEndpoint implements IEndPoint {
 		Deferred<HttpResponse> deferred = new Deferred<HttpResponse>();
 		deferred.callback(response);
 		return deferred;
-	}
-
+	} 
 }

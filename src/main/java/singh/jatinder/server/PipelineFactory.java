@@ -26,6 +26,9 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
+import org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler;
+import org.jboss.netty.util.HashedWheelTimer;
 
 import singh.jatinder.server.statistics.StatisticsEndPoint;
 
@@ -36,7 +39,8 @@ import singh.jatinder.server.statistics.StatisticsEndPoint;
  */
 public class PipelineFactory implements ChannelPipelineFactory {
 
-	private final ConnectionManager connmgr = new ConnectionManager();
+	private final AbstractTrafficShapingHandler trafficShapingHandler = new GlobalTrafficShapingHandler(new HashedWheelTimer());
+	private final ConnectionManager connmgr = new ConnectionManager(trafficShapingHandler);
 
 	/** Stateless handler for RPCs. */
 	private final RequestHandler handler;
@@ -53,6 +57,7 @@ public class PipelineFactory implements ChannelPipelineFactory {
 	//@Override
 	public ChannelPipeline getPipeline() throws Exception {
 		final ChannelPipeline pipeline = pipeline();
+		pipeline.addLast("traffic-handler", trafficShapingHandler);
 		pipeline.addLast("connmgr", connmgr);
 		pipeline.addLast("decoder", new HttpRequestDecoder());
 		pipeline.addLast("encoder", new HttpResponseEncoder());
