@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 public class ServerInit {
 	private static final Logger LOG = LoggerFactory.getLogger(ServerInit.class);
 	private ServerBootstrap controller;
+	private volatile RequestHandler requestDistributor;
 	
 	public void start(int port, RequestHandler handler, boolean enableKeepAlive) {
 		LOG.info("Starting.");
@@ -44,6 +45,8 @@ public class ServerInit {
 		} catch (Exception e) {
 			LOG.warn("Failed to close stdin", e);
 		}
+		
+		requestDistributor = handler;
 		
 		final NioServerSocketChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), 100);
 		try {
@@ -59,6 +62,10 @@ public class ServerInit {
 			factory.releaseExternalResources();
 			throw new RuntimeException("Initialization failed", t);
 		}
+	}
+	
+	public RequestDistributor getRequestDistributor() {
+		return (RequestDistributor)requestDistributor;
 	}
 	
 	public void stop() {
