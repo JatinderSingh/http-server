@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,13 +49,20 @@ public class ServerInit {
 		
 		requestDistributor = handler;
 		
-		final NioServerSocketChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), 100);
+		final NioServerSocketChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 		try {
 			controller = new ServerBootstrap(factory);
 			controller.setPipelineFactory(new PipelineFactory(handler));
 			controller.setOption("child.tcpNoDelay", true);
 			controller.setOption("child.keepAlive", enableKeepAlive);
 			controller.setOption("reuseAddress", true);
+			// better to have an receive buffer predictor 
+			controller.setOption("receiveBufferSizePredictorFactory", new AdaptiveReceiveBufferSizePredictorFactory());  
+
+			//if the server is sending 1000 messages per sec, optimum write buffer water marks will
+			//prevent unnecessary throttling, Check NioSocketChannelConfig doc   
+			controller.setOption("writeBufferLowWaterMark", 1 * 1024);
+			controller.setOption("writeBufferHighWaterMark", 64 * 1024);
 			final InetSocketAddress addr = new InetSocketAddress(port);
 			controller.bind(addr);
 			LOG.info("Server Ready to serve on " + addr);
