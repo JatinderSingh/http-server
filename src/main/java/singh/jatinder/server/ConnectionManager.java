@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -34,6 +35,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,7 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 	  private static final AtomicLong totalResponses = new AtomicLong();
 	  private static final AtomicLong activeBoundedChannels = new AtomicLong();
 	  private static final AtomicLong activeChannels = new AtomicLong();
+	  private static final AtomicLong idleEventConnectionClose = new AtomicLong();
 
 	  private static final DefaultChannelGroup channels =
 	    new DefaultChannelGroup("all");
@@ -70,13 +73,12 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 	  public ConnectionManager(AbstractTrafficShapingHandler trafficShapingHandler) {
 		  this.trafficHandler = trafficShapingHandler;
 	  }
-
+	  
 	  @Override
 	  public void channelOpen(final ChannelHandlerContext ctx,
 	                          final ChannelStateEvent e) {
 	    channels.add(e.getChannel());
 	    totalConnections.incrementAndGet();
-	    activeConnections.incrementAndGet();
 	  }
 
 	  @Override
@@ -84,6 +86,11 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 	                             final ChannelEvent e) throws Exception {
 	    if (e instanceof ChannelStateEvent) {
 	      LOG.debug(e.toString());
+	    } 
+	    if (e instanceof IdleStateEvent) {
+	    	LOG.debug(e.toString());
+	    	e.getFuture().addListener(ChannelFutureListener.CLOSE);
+	    	idleEventConnectionClose.incrementAndGet();
 	    }
 	    super.handleUpstream(ctx, e);
 	  }
@@ -116,6 +123,7 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 
 	public Map<String, Number> getStatistics() {
 		Map<String, Number> stats = new HashMap<String, Number>();
+		stats.put("idleEventConnectionClose", idleEventConnectionClose.get());
 		stats.put("totalConnections", totalConnections.get());
 		stats.put("activeConnections", activeConnections.get());
 		stats.put("exceptionsCount", exceptionsCount.get());
