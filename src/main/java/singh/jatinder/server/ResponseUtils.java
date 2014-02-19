@@ -21,8 +21,10 @@ package singh.jatinder.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -115,4 +117,12 @@ public class ResponseUtils {
 		      .append(PAGE_BODY_MID).append(body).append(PAGE_FOOTER);
 		    return getChannelBuffer(buf);
 		  }
+	  
+	  public static FullHttpResponse makeSimpleHtmlResponse(ChannelHandlerContext context, HttpVersion version, HttpResponseStatus status, String message) {
+		  ByteBuf buffer = context.alloc().buffer(message.length());
+		  buffer.writeBytes(message.getBytes());
+		  FullHttpResponse response = new DefaultFullHttpResponse(version, status, buffer);
+		  response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		  return response;
+	  }
 }
