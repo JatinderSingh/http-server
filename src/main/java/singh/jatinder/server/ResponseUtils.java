@@ -19,6 +19,8 @@
  */
 package singh.jatinder.server;
 
+import com.stumbleupon.async.Deferred;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -118,11 +120,13 @@ public class ResponseUtils {
 		    return getChannelBuffer(buf);
 		  }
 	  
-	  public static FullHttpResponse makeSimpleHtmlResponse(ChannelHandlerContext context, HttpVersion version, HttpResponseStatus status, String message) {
+	  public static Deferred<FullHttpResponse> makeSimpleHtmlResponse(ChannelHandlerContext context, HttpVersion version, HttpResponseStatus status, String message) {
 		  ByteBuf buffer = context.alloc().buffer(message.length());
 		  buffer.writeBytes(message.getBytes());
 		  FullHttpResponse response = new DefaultFullHttpResponse(version, status, buffer);
 		  response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
-		  return response;
+		  Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
+		  deferred.callback(response);
+		  return deferred;
 	  }
 }
