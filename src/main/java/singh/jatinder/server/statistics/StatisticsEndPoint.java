@@ -19,16 +19,16 @@
  */
 package singh.jatinder.server.statistics;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import singh.jatinder.server.IEndPoint;
 import singh.jatinder.server.ResponseUtils;
@@ -49,14 +49,13 @@ public class StatisticsEndPoint implements IEndPoint {
 		statistics.put(name, collector);
 	}
 	
-	public Deferred<HttpResponse> process(ChannelHandlerContext context, HttpRequest request) {
+	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
 		StringBuilder buffer = new StringBuilder();
 		for(Entry<String, ICollector> entry : statistics.entrySet()) {
 			buffer.append(entry.getKey()).append("<br>").append(mapToBuffer(entry.getValue().getStatistics())).append("<br>").append("<br>");
 		}
-		HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
-		response.setContent(ResponseUtils.makePage(null, "Stats", "Stats", buffer));
-		Deferred<HttpResponse> deferred = new Deferred<HttpResponse>();
+		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, ResponseUtils.makePage(null, "Stats", "Stats", buffer));
+		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
 		return deferred;
 	}

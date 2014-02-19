@@ -19,12 +19,14 @@
  */
 package singh.jatinder.server;
 
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +40,7 @@ import com.stumbleupon.async.Deferred;
  * Class to Register all user defined endpoints to server.
  * 
  */
+@Sharable
 public class RequestDistributor extends RequestHandler {
 
 	private static final Logger LOG = LoggerFactory.getLogger(RequestDistributor.class);
@@ -47,20 +50,20 @@ public class RequestDistributor extends RequestHandler {
 		endPoints.put("stats", new StatisticsEndPoint());
 	}
 	
-	protected Deferred<HttpResponse> process(final ChannelHandlerContext context, final HttpRequest request) {
+	protected Deferred<FullHttpResponse> process(final ChannelHandlerContext context, final FullHttpRequest request) {
 		LOG.debug("Http Request ? from thread ?", request, Thread.currentThread());
-		Deferred<HttpResponse> def = null;
+		Deferred<FullHttpResponse> def = null;
 		final IEndPoint endPoint = endPoints.get(getEndPoint(request));
 		if (null != endPoint) {
 			def = endPoint.process(context, request);
 		} else {
-			def =  new Deferred<HttpResponse>();
+			def =  new Deferred<FullHttpResponse>();
 			def.callback(ResponseUtils.PAGE_NOT_FOUND);
 		}
 		return def;
 	}
 	
 	public void addEndPoint(String uri, IEndPoint endpoint) {
-		endPoints.put(uri, endpoint);
+		endPoints.put(uri.intern(), endpoint);
 	}
 }

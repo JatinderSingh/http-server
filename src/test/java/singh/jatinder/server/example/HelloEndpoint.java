@@ -19,15 +19,14 @@
  */
 package singh.jatinder.server.example;
 
-import java.nio.charset.Charset;
-
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import singh.jatinder.server.IEndPoint;
 
 import com.stumbleupon.async.Deferred;
@@ -40,11 +39,15 @@ import com.stumbleupon.async.Deferred;
  */
 public class HelloEndpoint implements IEndPoint {
 
-	public Deferred<HttpResponse> process(ChannelHandlerContext context, HttpRequest request) {
-		HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
-		response.setHeader("content-type", "text/html");
-		response.setContent(ChannelBuffers.copiedBuffer("Hello", Charset.defaultCharset()));
-		Deferred<HttpResponse> deferred = new Deferred<HttpResponse>();
+	byte[] response = "Hello".getBytes();
+	
+	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
+		ReferenceCountUtil.release(request);
+		ByteBuf buffer = context.alloc().buffer();
+		buffer.writeBytes(response);
+		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);
+		response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
 		return deferred;
 	} 

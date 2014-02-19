@@ -19,24 +19,20 @@
  */
 package singh.jatinder.server;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.traffic.AbstractTrafficShapingHandler;
+import io.netty.util.concurrent.GlobalEventExecutor;
+
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.WriteCompletionEvent;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.handler.timeout.IdleStateEvent;
-import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,24 +44,24 @@ import singh.jatinder.server.statistics.ICollector;
  * Connection manager aggregating all connection related data
  *
  */
-public class ConnectionManager extends SimpleChannelHandler implements ICollector {
+@Sharable
+public class ConnectionManager extends ChannelInboundHandlerAdapter implements ICollector {
 	private static final Logger LOG = LoggerFactory.getLogger(ConnectionManager.class);
 
 	  private static final AtomicLong totalConnections = new AtomicLong();
-	  private static final AtomicLong activeConnections = new AtomicLong();
+	  private static final AtomicLong registeredChannels = new AtomicLong();
 	  private static final AtomicLong exceptionsCount = new AtomicLong();
 	  private static final AtomicLong totalRequests = new AtomicLong();
-	  private static final AtomicLong totalResponses = new AtomicLong();
-	  private static final AtomicLong activeBoundedChannels = new AtomicLong();
+	  private static final AtomicLong readCompleteEvents = new AtomicLong();
 	  private static final AtomicLong activeChannels = new AtomicLong();
 	  private static final AtomicLong idleEventConnectionClose = new AtomicLong();
 
-	  private static final DefaultChannelGroup channels =
-	    new DefaultChannelGroup("all");
+	  private static final DefaultChannelGroup channels = new DefaultChannelGroup("all", GlobalEventExecutor.INSTANCE);
 
 	  private final AbstractTrafficShapingHandler trafficHandler;
 	  
 	  static void closeAllConnections() {
+		GlobalEventExecutor.INSTANCE.shutdownGracefully().awaitUninterruptibly();  
 	    channels.close().awaitUninterruptibly();
 	  }
 
@@ -74,13 +70,80 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 		  this.trafficHandler = trafficShapingHandler;
 	  }
 	  
-	  @Override
-	  public void channelOpen(final ChannelHandlerContext ctx,
-	                          final ChannelStateEvent e) {
-	    channels.add(e.getChannel());
-	    totalConnections.incrementAndGet();
-	  }
+	    @Override
+	    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+	    	totalConnections.incrementAndGet();
+	    	registeredChannels.incrementAndGet();
+	    	channels.add(ctx.channel());
+	    	super.channelRegistered(ctx);
+	    }
 
+	    @Override
+	    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+	    	registeredChannels.decrementAndGet();
+	    	channels.remove(ctx.channel());
+	       super.channelUnregistered(ctx);
+	    }
+
+	    @Override
+	    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+	    	activeChannels.incrementAndGet();
+	        super.channelActive(ctx);
+	    }
+
+	    @Override
+	    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+	    	activeChannels.decrementAndGet();
+	        super.channelInactive(ctx);
+	    }
+
+	    @Override
+	    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	    	totalRequests.incrementAndGet();
+	        super.channelRead(ctx, msg);
+	    }
+
+	    @Override
+	    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+	    	readCompleteEvents.incrementAndGet();
+	        super.channelReadComplete(ctx);
+	    }
+
+	    @Override
+	    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+	    	if (evt instanceof IdleStateEvent) {
+		    	LOG.debug(evt.toString());
+		    	ctx.close();
+		    	idleEventConnectionClose.incrementAndGet();
+		    }
+	        super.userEventTriggered(ctx, evt);
+	    }
+
+	    @Override
+	    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+	        super.channelWritabilityChanged(ctx);
+	    }
+
+	    @Override
+	    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+	            throws Exception {
+	    	if (cause instanceof ClosedChannelException) {
+	  	      LOG.warn("Attempt to write to closed channel {}", ctx.channel());
+	  	    } else if (cause instanceof IOException
+	  	               && "Connection reset by peer".equals(cause.getMessage())) {
+	  	    	/**
+	  	    	 * Only possible way in java until Some other way is exposed by jvm 
+	  	    	 */
+	  	    	registeredChannels.decrementAndGet();
+	  	    } else {
+	  	      LOG.error("Unexpected exception from downstream for {} " , ctx.channel(), cause);
+	  	      ctx.channel().close();
+	  	    }
+	  	    exceptionsCount.incrementAndGet();
+	        super.exceptionCaught(ctx, cause);
+	    }
+	  
+/*
 	  @Override
 	  public void handleUpstream(final ChannelHandlerContext ctx,
 	                             final ChannelEvent e) throws Exception {
@@ -94,92 +157,28 @@ public class ConnectionManager extends SimpleChannelHandler implements ICollecto
 	    }
 	    super.handleUpstream(ctx, e);
 	  }
+*/
+	 
+	  public Map<String, Number> getStatistics() {
+			Map<String, Number> stats = new HashMap<String, Number>();
+			stats.put("idleEventConnectionClose", idleEventConnectionClose.get());
+			stats.put("totalConnections", totalConnections.get());
+			stats.put("activeConnections", registeredChannels.get());
+			stats.put("exceptionsCount", exceptionsCount.get());
+			stats.put("totalRequests", totalRequests.get());
+			stats.put("activeChannels", activeChannels.get());
+			stats.put("readCompleteEvents", readCompleteEvents.get());
+			stats.put("traffic-CumulativeReadBytes", trafficHandler.trafficCounter().cumulativeReadBytes());
+			stats.put("traffic-CumulativeWrittenBytes", trafficHandler.trafficCounter().cumulativeWrittenBytes());
+			stats.put("traffic-CurrentReadBytes", trafficHandler.trafficCounter().currentReadBytes());
+			stats.put("traffic-CurrentWrittenBytes", trafficHandler.trafficCounter().currentWrittenBytes());
+			stats.put("traffic-LastReadBytes", trafficHandler.trafficCounter().lastReadBytes());
+			stats.put("traffic-LastWrittenBytes", trafficHandler.trafficCounter().lastWrittenBytes());
+			stats.put("traffic-LastCumulativeTime", trafficHandler.trafficCounter().lastCumulativeTime());
+			stats.put("traffic-LastReadThroughput", trafficHandler.trafficCounter().lastReadThroughput());
+			stats.put("traffic-LastWriteThroughput", trafficHandler.trafficCounter().lastWriteThroughput());
+			stats.put("traffic-LastTime", trafficHandler.trafficCounter().lastTime());
+			return stats;
+		}
 
-	  @Override
-	  public void exceptionCaught(final ChannelHandlerContext ctx,
-	                              final ExceptionEvent e) {
-	    final Throwable cause = e.getCause();
-	    final Channel chan = ctx.getChannel();
-	    if (cause instanceof ClosedChannelException) {
-	      LOG.warn("Attempt to write to closed channel " + chan);
-	    } else if (cause instanceof IOException
-	               && "Connection reset by peer".equals(cause.getMessage())) {
-	    	/**
-	    	 * Only possible way in java until Some other way is exposed by jvm 
-	    	 */
-	    	activeConnections.decrementAndGet();
-	    } else {
-	      LOG.error("Unexpected exception from downstream for " + chan, cause);
-	      e.getChannel().close();
-	    }
-	    exceptionsCount.incrementAndGet();
-	  }
-	  
-	  @Override
-	  public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		  activeConnections.decrementAndGet();
-		  super.channelClosed(ctx, e);
-	   }
-
-	public Map<String, Number> getStatistics() {
-		Map<String, Number> stats = new HashMap<String, Number>();
-		stats.put("idleEventConnectionClose", idleEventConnectionClose.get());
-		stats.put("totalConnections", totalConnections.get());
-		stats.put("activeConnections", activeConnections.get());
-		stats.put("exceptionsCount", exceptionsCount.get());
-		stats.put("totalRequests", totalRequests.get());
-		stats.put("totalResponses", totalResponses.get());
-		stats.put("activeBoundedChannels", activeBoundedChannels.get());
-		stats.put("activeChannels", activeChannels.get());
-		stats.put("underProcessRequests", totalRequests.get()-totalResponses.get());
-		stats.put("traffic-CumulativeReadBytes", trafficHandler.getTrafficCounter().getCumulativeReadBytes());
-		stats.put("traffic-CumulativeWrittenBytes", trafficHandler.getTrafficCounter().getCumulativeWrittenBytes());
-		stats.put("traffic-CurrentReadBytes", trafficHandler.getTrafficCounter().getCurrentReadBytes());
-		stats.put("traffic-CurrentWrittenBytes", trafficHandler.getTrafficCounter().getCurrentWrittenBytes());
-		stats.put("traffic-LastReadBytes", trafficHandler.getTrafficCounter().getLastReadBytes());
-		stats.put("traffic-LastWrittenBytes", trafficHandler.getTrafficCounter().getLastWrittenBytes());
-		stats.put("traffic-LastCumulativeTime", trafficHandler.getTrafficCounter().getLastCumulativeTime());
-		stats.put("traffic-LastReadThroughput", trafficHandler.getTrafficCounter().getLastReadThroughput());
-		stats.put("traffic-LastWriteThroughput", trafficHandler.getTrafficCounter().getLastWriteThroughput());
-		stats.put("traffic-LastTime", trafficHandler.getTrafficCounter().getLastTime());
-		return stats;
-	}
-
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-    	totalRequests.incrementAndGet();
-    	super.messageReceived(ctx, e);
-    }
-
-    public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-    	activeBoundedChannels.incrementAndGet();
-    	super.channelBound(ctx, e);
-    }
-
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-    	activeChannels.incrementAndGet();
-        super.channelConnected(ctx, e);
-    }
-
-    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-    	activeChannels.decrementAndGet();
-        super.channelDisconnected(ctx, e);
-    }
-
-    public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-    	activeBoundedChannels.decrementAndGet();
-        super.channelUnbound(ctx, e);
-    }
-
-    public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e) throws Exception {
-    	totalResponses.incrementAndGet();
-        super.writeComplete(ctx, e);
-    }
-
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-    	if (e instanceof ChannelStateEvent) {
-  	      LOG.debug(e.toString());
-  	    }
-  	    super.handleDownstream(ctx, e);
-    }
 }

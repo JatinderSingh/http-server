@@ -19,9 +19,9 @@
  */
 package singh.jatinder.server;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 
 import com.stumbleupon.async.Deferred;
 
@@ -32,5 +32,5 @@ import com.stumbleupon.async.Deferred;
  * 
  */
 public interface IEndPoint {
-	Deferred<HttpResponse> process(ChannelHandlerContext context, HttpRequest request);
+	Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request);
 }

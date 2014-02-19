@@ -19,12 +19,12 @@
  */
 package singh.jatinder.server;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * @author Jatinder
@@ -40,11 +40,9 @@ public class ResponseUtils {
     public static final int HTTP_CACHE_SECONDS = 60;
 	
 	/** Precomputed 404 response. */
-	public static final HttpResponse PAGE_NOT_FOUND = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.NOT_FOUND);
-	static {
-		PAGE_NOT_FOUND.setContent(makePage(null, "Page Not Found", "Error 404",
-				new StringBuilder("<blockquote> <h1>Page Not Found</h1> The requested URL was not found on this server.</blockquote>")));  
-	}
+	public static final FullHttpResponse PAGE_NOT_FOUND = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.NOT_FOUND, makePage(null, "Page Not Found", "Error 404",
+			new StringBuilder("<blockquote> <h1>Page Not Found</h1> The requested URL was not found on this server.</blockquote>")));
+	
 	
 	  // -------------------------------------------- //
 	  // Boilerplate (from Google) //
@@ -91,8 +89,8 @@ public class ResponseUtils {
 	    + PAGE_BODY_MID.length()
 	    + PAGE_FOOTER.length();
 
-	  public static ChannelBuffer getChannelBuffer (StringBuilder buffer) {
-		  return ChannelBuffers.wrappedBuffer(buffer.toString().getBytes());
+	  public static ByteBuf getChannelBuffer (StringBuilder buffer) {
+		  return Unpooled.wrappedBuffer(buffer.toString().getBytes());
 	  }
 	   
 	   /**
@@ -104,7 +102,7 @@ public class ResponseUtils {
 		* @param body The body of the page (excluding the {@code body} tag).
 		* @return A full HTML page.
 		*/
-	  public static ChannelBuffer makePage(final String htmlheader, final String title,
+	  public static ByteBuf makePage(final String htmlheader, final String title,
 		                                        final String subtitle, final StringBuilder body) {
 		    final StringBuilder buf = new StringBuilder(
 		      BOILERPLATE_LENGTH + (htmlheader == null ? 0 : htmlheader.length())

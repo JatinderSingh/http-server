@@ -19,18 +19,15 @@
  */
 package singh.jatinder.server;
 
-import java.nio.charset.Charset;
-
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 import com.stumbleupon.async.Deferred;
-
-import singh.jatinder.server.IEndPoint;
 
 /**
  * @author Jatinder
@@ -39,17 +36,19 @@ import singh.jatinder.server.IEndPoint;
  *
  */
 public abstract class ShutDownEndpoint extends RequestHandler implements IEndPoint {
-
-	public Deferred<HttpResponse> process(ChannelHandlerContext context, HttpRequest request) {
-		HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
-		response.setHeader("content-type", "text/html");
-		response.setContent(ChannelBuffers.copiedBuffer("Accepted ShutDown Request", Charset.defaultCharset()));
-		Deferred<HttpResponse> deferred = new Deferred<HttpResponse>();
+	
+	private static final String resp = "Accepted ShutDown Request";
+	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
+		ByteBuf buffer = context.alloc().buffer(resp.length());
+		buffer.writeBytes(resp.getBytes());
+		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);
+		response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
-		shutdown();
-		super.doShutdown(context.getChannel());
+		shutDownGracefully();
+		super.doShutdown();
 		return deferred;
 	}
-
-	public abstract void shutdown();
+	
+	public abstract void shutDownGracefully();
 }

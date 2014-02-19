@@ -19,12 +19,16 @@
  */
 package singh.jatinder.server;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import java.net.InetSocketAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,26 +52,37 @@ public class ServerInit {
 		}
 		
 		requestDistributor = handler;
-		
-		final NioServerSocketChannelFactory factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+		requestDistributor.setInitializer(this);
+		EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        
 		try {
-			controller = new ServerBootstrap(factory);
-			controller.setPipelineFactory(new PipelineFactory(handler));
-			controller.setOption("child.tcpNoDelay", true);
-			controller.setOption("child.keepAlive", enableKeepAlive);
-			controller.setOption("reuseAddress", true);
-			// better to have an receive buffer predictor 
-			controller.setOption("receiveBufferSizePredictorFactory", new AdaptiveReceiveBufferSizePredictorFactory());  
-
-			//if the server is sending 1000 messages per sec, optimum write buffer water marks will
-			//prevent unnecessary throttling, Check NioSocketChannelConfig doc   
-			controller.setOption("writeBufferLowWaterMark", 1 * 1024);
-			controller.setOption("writeBufferHighWaterMark", 64 * 1024);
+			controller = new ServerBootstrap();
+			controller.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(new PipelineFactory(handler));
+			controller.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+			controller.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+			controller.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);
+			controller.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
+			controller.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1 * 1024);
+			controller.option(ChannelOption.SO_KEEPALIVE, true);
+			controller.option(ChannelOption.SO_REUSEADDR, true);
+			controller.option(ChannelOption.TCP_NODELAY, true);
+			controller.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+			controller.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
+			controller.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 10);
+			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
+			controller.childOption(ChannelOption.SO_REUSEADDR, true);
+			controller.childOption(ChannelOption.TCP_NODELAY, true);
+			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
+			controller.childOption(ChannelOption.SO_REUSEADDR, true);
+			controller.childOption(ChannelOption.TCP_NODELAY, true);
+			
 			final InetSocketAddress addr = new InetSocketAddress(port);
-			controller.bind(addr);
+			controller.bind(addr).sync();
 			LOG.info("Server Ready to serve on " + addr);
 		} catch (Throwable t) {
-			factory.releaseExternalResources();
+			bossGroup.shutdownGracefully();
+			workerGroup.shutdownGracefully();
 			throw new RuntimeException("Initialization failed", t);
 		}
 	}
@@ -76,11 +91,12 @@ public class ServerInit {
 		return (RequestDistributor)requestDistributor;
 	}
 	
-	public void stop() {
+	public void shutDownGracefully() {
 		LOG.info("Stop Requested");
 		ConnectionManager.closeAllConnections();
 		if (null!=controller) {
-			controller.releaseExternalResources();
+			controller.group().shutdownGracefully().awaitUninterruptibly();
+			controller.childGroup().shutdownGracefully().awaitUninterruptibly();
 		}
 	}
 }

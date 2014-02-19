@@ -19,18 +19,16 @@
  */
 package singh.jatinder.server;
 
-import static org.jboss.netty.channel.Channels.pipeline;
-
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.timeout.IdleStateHandler;
-import org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler;
-import org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler;
-import org.jboss.netty.util.HashedWheelTimer;
-
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.handler.traffic.AbstractTrafficShapingHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import singh.jatinder.server.statistics.StatisticsEndPoint;
 
 /**
@@ -38,11 +36,11 @@ import singh.jatinder.server.statistics.StatisticsEndPoint;
  * 
  * Netty Internal pipeline setup for Http server
  */
-public class PipelineFactory implements ChannelPipelineFactory {
+public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 
-	private final AbstractTrafficShapingHandler trafficShapingHandler = new GlobalTrafficShapingHandler(new HashedWheelTimer());
+	private final AbstractTrafficShapingHandler trafficShapingHandler = new GlobalTrafficShapingHandler(GlobalEventExecutor.INSTANCE, 10l);
 	private final ConnectionManager connmgr = new ConnectionManager(trafficShapingHandler);
-	private final IdleStateHandler idleState = new IdleStateHandler(new HashedWheelTimer(), 5, 5, 10);
+	//private final IdleStateHandler idleState = new IdleStateHandler(5, 5, 10);
 
 	/** Stateless handler for RPCs. */
 	private final RequestHandler handler;
@@ -56,16 +54,18 @@ public class PipelineFactory implements ChannelPipelineFactory {
 		StatisticsEndPoint.registerStatisticalCollector("RequestHandler", handler);
 	}
 
-	//@Override
-	public ChannelPipeline getPipeline() throws Exception {
-		final ChannelPipeline pipeline = pipeline();
+	@Override
+	public void initChannel(SocketChannel ch) throws Exception {
+		final ChannelPipeline pipeline = ch.pipeline();
 		pipeline.addLast("traffic-handler", trafficShapingHandler);
-		pipeline.addLast("idleStateHandler", idleState);
+		pipeline.addLast("idleStateHandler", new IdleStateHandler(5, 5, 10));
 		pipeline.addLast("connmgr", connmgr);
+
+		//pipeline.addLast("codec", new HttpServerCodec());
 		pipeline.addLast("decoder", new HttpRequestDecoder());
+		pipeline.addLast("aggregator", new HttpObjectAggregator(10));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
-		pipeline.addLast("aggregator", new HttpChunkAggregator(10000));
+		
 		pipeline.addLast("handler", handler);
-		return pipeline;
 	}
 }

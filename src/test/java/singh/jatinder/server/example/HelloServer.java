@@ -33,6 +33,7 @@ public class HelloServer {
 	public static void main(String[] args) {
 		RequestDistributor distr = new RequestDistributor();
 		distr.addEndPoint("hello", new HelloEndpoint());
+		distr.addEndPoint("diediedie", new TerminateEndPoint());
 		new ServerInit().start(9000, distr, true);
 	}
 }
