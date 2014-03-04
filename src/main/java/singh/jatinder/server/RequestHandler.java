@@ -30,8 +30,10 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.AppendableCharSequence;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,6 +60,9 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 	protected static final AtomicLong totalHttpRequests = new AtomicLong();
 	protected static final AtomicLong totalExceptions = new AtomicLong();
 	protected static final AtomicLong activeHttpRequests = new AtomicLong();
+	private static final String normalLogTemplate = "Request on uri {} of type {} was processed in {} ms";
+	private static final String exceptionLogTemplate = "Request on uri {} of type {} threw Exception in {} ms";
+	private static final String unexpectedExceptionLogTemplate = "Unexpected request : {} from channel {} ";
 	
 	  @Override
 	  public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
@@ -70,7 +75,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			response.addCallbacks(new Callback<Object, FullHttpResponse>() {
 				public Object call(FullHttpResponse response) throws Exception {
 					sendResponse(ctx, response, request);
-					LOG.info("Request on uri {} of type {} was processed in {} ms", new Object[] { request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 });
+					LOG.trace(normalLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
 					activeHttpRequests.decrementAndGet();
 					return null;
 				}
@@ -81,14 +86,14 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 					response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
 					// FIXME response.setContent(arg.getMessage().getBytes(arg0));
 					sendResponse(ctx, response, request);
-					LOG.info("Request on uri {} of type {} threw Exception in {} ms", new Object[] { request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 });
+					LOG.debug(exceptionLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
 					LOG.error(arg.getLocalizedMessage(), arg);
 					activeHttpRequests.decrementAndGet();
 					return null;
 				}
 			});
 		} else {
-			LOG.error("Unexpected request : {} from channel {} ", msg, ctx.channel());
+			LOG.error(unexpectedExceptionLogTemplate, msg, ctx.channel());
 			totalExceptions.incrementAndGet();
 			ctx.channel().close();
 		}
@@ -100,14 +105,9 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			this.initializer = initialiser;
 		}
 	}
-	  
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		LOG.error(cause.getLocalizedMessage(), cause);
-		ctx.channel().close();
-	}
   
 	private void sendResponse(final ChannelHandlerContext ctx, final FullHttpResponse response, final HttpRequest request) {
+		ReferenceCountUtil.release(request);
 		if (!ctx.channel().isActive()) {
 			return;
 		}
@@ -132,7 +132,6 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 				super("ShutdownNetty");
 			}
 			public void run() {
-				ConnectionManager.closeAllConnections();
 				initializer.shutDownGracefully();
 			}
 		}
@@ -183,7 +182,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			pos = (slash > 0 ? slash // Request: /foo/bar
 					: uri.length()); // Request: /foo
 		}
-		return uri.substring(1, pos).intern();
+		return uri.substring(1, pos);
 	}
 	
 	public Map<String, Number> getStatistics() {

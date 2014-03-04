@@ -34,6 +34,6 @@ public class HelloServer {
 		RequestDistributor distr = new RequestDistributor();
 		distr.addEndPoint("hello", new HelloEndpoint());
 		distr.addEndPoint("diediedie", new TerminateEndPoint());
-		new ServerInit().start(9000, distr, true);
+		new ServerInit().start(9900, distr, true);
 	}
 }

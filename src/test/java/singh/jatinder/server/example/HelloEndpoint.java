@@ -42,7 +42,7 @@ public class HelloEndpoint implements IEndPoint {
 	byte[] response = "Hello".getBytes();
 	
 	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
-		ReferenceCountUtil.release(request);
+		//ReferenceCountUtil.release(request);
 		ByteBuf buffer = context.alloc().buffer();
 		buffer.writeBytes(response);
 		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);

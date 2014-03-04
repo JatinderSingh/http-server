@@ -25,6 +25,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -129,4 +130,18 @@ public class ResponseUtils {
 		  deferred.callback(response);
 		  return deferred;
 	  }
+	  
+		public static String getRequestContentAsString(FullHttpRequest request) {
+			int length = request.content().readableBytes();
+			byte[] bytes = new byte[length];
+			request.content().getBytes(request.content().readerIndex(), bytes);
+			return new String(bytes);
+		}
+		
+		public static byte[] getRequestContentAsBytes(FullHttpRequest request) {
+			int length = request.content().readableBytes();
+			byte[] bytes = new byte[length];
+			request.content().getBytes(request.content().readerIndex(), bytes);
+			return bytes;
+		}
 }

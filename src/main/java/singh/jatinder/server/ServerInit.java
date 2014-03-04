@@ -22,6 +22,7 @@ package singh.jatinder.server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -78,8 +79,11 @@ public class ServerInit {
 			controller.childOption(ChannelOption.TCP_NODELAY, true);
 			
 			final InetSocketAddress addr = new InetSocketAddress(port);
-			controller.bind(addr).sync();
-			LOG.info("Server Ready to serve on " + addr);
+			ChannelFuture future = controller.bind(addr).sync();
+			if (future.isSuccess())
+				LOG.info("Server Ready to serve on " + addr);
+			else 
+				throw new Exception("Address already in use");
 		} catch (Throwable t) {
 			bossGroup.shutdownGracefully();
 			workerGroup.shutdownGracefully();
@@ -93,7 +97,6 @@ public class ServerInit {
 	
 	public void shutDownGracefully() {
 		LOG.info("Stop Requested");
-		ConnectionManager.closeAllConnections();
 		if (null!=controller) {
 			controller.group().shutdownGracefully().awaitUninterruptibly();
 			controller.childGroup().shutdownGracefully().awaitUninterruptibly();

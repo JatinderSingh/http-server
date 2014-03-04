@@ -26,9 +26,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.handler.traffic.AbstractTrafficShapingHandler;
-import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import singh.jatinder.server.statistics.StatisticsEndPoint;
 
 /**
@@ -38,8 +35,7 @@ import singh.jatinder.server.statistics.StatisticsEndPoint;
  */
 public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 
-	private final AbstractTrafficShapingHandler trafficShapingHandler = new GlobalTrafficShapingHandler(GlobalEventExecutor.INSTANCE, 10l);
-	private final ConnectionManager connmgr = new ConnectionManager(trafficShapingHandler);
+	private final ConnectionManager connmgr = new ConnectionManager();
 	//private final IdleStateHandler idleState = new IdleStateHandler(5, 5, 10);
 
 	/** Stateless handler for RPCs. */
@@ -57,13 +53,11 @@ public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 	@Override
 	public void initChannel(SocketChannel ch) throws Exception {
 		final ChannelPipeline pipeline = ch.pipeline();
-		pipeline.addLast("traffic-handler", trafficShapingHandler);
-		pipeline.addLast("idleStateHandler", new IdleStateHandler(5, 5, 10));
+		pipeline.addLast("idleStateHandler", new IdleStateHandler(60, 60, 60));
 		pipeline.addLast("connmgr", connmgr);
 
-		//pipeline.addLast("codec", new HttpServerCodec());
-		pipeline.addLast("decoder", new HttpRequestDecoder());
-		pipeline.addLast("aggregator", new HttpObjectAggregator(10));
+		pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192, 8192));
+		pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
 		
 		pipeline.addLast("handler", handler);

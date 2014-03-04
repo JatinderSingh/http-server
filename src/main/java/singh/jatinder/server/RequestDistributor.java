@@ -21,8 +21,10 @@ package singh.jatinder.server;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,11 +53,16 @@ public class RequestDistributor extends RequestHandler {
 	}
 	
 	protected Deferred<FullHttpResponse> process(final ChannelHandlerContext context, final FullHttpRequest request) {
-		LOG.debug("Http Request ? from thread ?", request, Thread.currentThread());
 		Deferred<FullHttpResponse> def = null;
 		final IEndPoint endPoint = endPoints.get(getEndPoint(request));
 		if (null != endPoint) {
-			def = endPoint.process(context, request);
+			try {
+				def = endPoint.process(context, request);
+			} catch (Exception e) {
+				def =  new Deferred<FullHttpResponse>();
+				FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseUtils.makePage(null, "INTERNAL ERROR", "Error 500", new StringBuilder(e.getLocalizedMessage())));
+				def.callback(response);
+			}
 		} else {
 			def =  new Deferred<FullHttpResponse>();
 			def.callback(ResponseUtils.PAGE_NOT_FOUND);
