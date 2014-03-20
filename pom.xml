@@ -28,7 +28,7 @@
       <artifactId>javassist</artifactId>
       <!-- <scope>compile</scope> --> <!-- override the 'test' scope defined at parent pom.xml -->
       <version>3.18.0-GA</version>
-      <optional>true</optional>
+      <!-- <optional>true</optional> -->
     </dependency>
   </dependencies>
 </project>

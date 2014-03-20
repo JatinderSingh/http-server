@@ -60,7 +60,7 @@ public class RequestDistributor extends RequestHandler {
 				def = endPoint.process(context, request);
 			} catch (Exception e) {
 				def =  new Deferred<FullHttpResponse>();
-				FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseUtils.makePage(null, "INTERNAL ERROR", "Error 500", new StringBuilder(e.getLocalizedMessage())));
+				FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseUtils.makePage(null, "INTERNAL ERROR", "Error 500", new StringBuilder(e.toString())));
 				def.callback(response);
 			}
 		} else {
