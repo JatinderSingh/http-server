@@ -25,10 +25,14 @@ import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.net.InetSocketAddress;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,12 +58,27 @@ public class ServerInit {
 		
 		requestDistributor = handler;
 		requestDistributor.setInitializer(this);
-		EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
-        
+		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
+		EventLoopGroup bossGroup;
+        EventLoopGroup workerGroup;
+        if (os.startsWith("linux")) {
+            bossGroup = new EpollEventLoopGroup();
+            workerGroup = new EpollEventLoopGroup();
+        } else {
+            bossGroup = new NioEventLoopGroup();
+            workerGroup = new NioEventLoopGroup();
+        }
+		        
 		try {
 			controller = new ServerBootstrap();
-			controller.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(new PipelineFactory(handler));
+			controller.group(bossGroup, workerGroup);
+			if (os.startsWith("linux")) {
+			    controller.channel(EpollServerSocketChannel.class);
+			    controller.option(EpollChannelOption.TCP_CORK, true);
+			} else {
+			    controller.channel(NioServerSocketChannel.class);
+			}
+			controller.childHandler(new PipelineFactory(handler));
 			controller.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 			controller.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
 			controller.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);

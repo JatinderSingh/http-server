@@ -116,7 +116,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			HttpHeaders.setContentLength(response, response.content().readableBytes());
 			response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
 		}
-		final ChannelFuture future = ctx.channel().write(response);
+		final ChannelFuture future = ctx.write(response);
 		ctx.flush();
 		if (!keepalive) {
 			future.addListener(ChannelFutureListener.CLOSE);
