@@ -52,7 +52,7 @@ public class StatisticsEndPoint implements IEndPoint {
 	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
 		StringBuilder buffer = new StringBuilder();
 		for(Entry<String, ICollector> entry : statistics.entrySet()) {
-			buffer.append(entry.getKey()).append("<br>").append(mapToBuffer(entry.getValue().getStatistics())).append("<br>").append("<br>");
+			buffer.append(entry.getKey()).append("<br>").append("<table>").append(mapToBuffer(entry.getValue().getStatistics())).append("</table>").append("<br>").append("<br>");
 		}
 		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, ResponseUtils.makePage(null, "Stats", "Stats", buffer));
 		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
@@ -63,7 +63,9 @@ public class StatisticsEndPoint implements IEndPoint {
 	private StringBuffer mapToBuffer(Map<String, Number> data) {
 		StringBuffer buffer = new StringBuffer();
 		for (Entry<String, Number> entry : data.entrySet()) {
-			buffer.append('\t').append(entry.getKey()).append(':').append(entry.getValue()).append("<br>");
+			buffer.append("<tr>");
+			buffer.append("<td>").append(entry.getKey()).append(':').append(entry.getValue()).append("</td>");
+			buffer.append("</tr>");
 		}
 		return buffer;
 	}
