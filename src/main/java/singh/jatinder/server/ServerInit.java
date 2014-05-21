@@ -47,6 +47,8 @@ public class ServerInit {
 	private static final Logger LOG = LoggerFactory.getLogger(ServerInit.class);
 	private ServerBootstrap controller;
 	private volatile RequestHandler requestDistributor;
+	private EventLoopGroup bossGroup;
+	private EventLoopGroup workerGroup;
 	
 	public void start(int port, RequestHandler handler, boolean enableKeepAlive) {
 		LOG.info("Starting.");
@@ -59,14 +61,12 @@ public class ServerInit {
 		requestDistributor = handler;
 		requestDistributor.setInitializer(this);
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
-		EventLoopGroup bossGroup;
-        EventLoopGroup workerGroup;
-        if (os.startsWith("linux")) {
-            bossGroup = new EpollEventLoopGroup();
-            workerGroup = new EpollEventLoopGroup();
+		if (os.startsWith("linux")) {
+            bossGroup = (null==bossGroup) ? new EpollEventLoopGroup():bossGroup;
+            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup():workerGroup;
         } else {
-            bossGroup = new NioEventLoopGroup();
-            workerGroup = new NioEventLoopGroup();
+            bossGroup = (null==bossGroup) ? new NioEventLoopGroup():bossGroup;
+            workerGroup = (null==workerGroup) ? new NioEventLoopGroup():workerGroup;
         }
 		        
 		try {
@@ -93,9 +93,7 @@ public class ServerInit {
 			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
 			controller.childOption(ChannelOption.SO_REUSEADDR, true);
 			controller.childOption(ChannelOption.TCP_NODELAY, true);
-			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
-			controller.childOption(ChannelOption.SO_REUSEADDR, true);
-			controller.childOption(ChannelOption.TCP_NODELAY, true);
+			controller.childOption(ChannelOption.SO_BACKLOG, 10);
 			
 			final InetSocketAddress addr = new InetSocketAddress(port);
 			ChannelFuture future = controller.bind(addr).sync();
@@ -109,6 +107,14 @@ public class ServerInit {
 			throw new RuntimeException("Initialization failed", t);
 		}
 	}
+	
+	protected EventLoopGroup getBossGroup() {
+        return bossGroup;
+    }
+	
+	protected EventLoopGroup getWorkerGroup() {
+        return workerGroup;
+    }
 	
 	public RequestDistributor getRequestDistributor() {
 		return (RequestDistributor)requestDistributor;
