@@ -87,13 +87,16 @@ public class ServerInit {
 			controller.option(ChannelOption.SO_KEEPALIVE, true);
 			controller.option(ChannelOption.SO_REUSEADDR, true);
 			controller.option(ChannelOption.TCP_NODELAY, true);
+			controller.option(ChannelOption.SO_LINGER, 0);
 			controller.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 			controller.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
 			controller.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 10);
 			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
 			controller.childOption(ChannelOption.SO_REUSEADDR, true);
 			controller.childOption(ChannelOption.TCP_NODELAY, true);
-			controller.childOption(ChannelOption.SO_BACKLOG, 10);
+			controller.childOption(ChannelOption.SO_LINGER, 0);
+			controller.childOption(ChannelOption.SO_RCVBUF, 6291456);
+			
 			
 			final InetSocketAddress addr = new InetSocketAddress(port);
 			ChannelFuture future = controller.bind(addr).sync();

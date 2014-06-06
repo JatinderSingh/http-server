@@ -110,7 +110,7 @@ public class ConnectionManager extends ChannelInboundHandlerAdapter implements I
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		if (cause instanceof ClosedChannelException) {
 			LOG.warn("Attempt to write to closed channel {}", ctx.channel());
-		} else if (cause instanceof IOException && ("An existing connection was forcibly closed by the remote host".equals(cause.getMessage()) || ("An established connection was aborted by the software in your host machine".equals(cause.getMessage()) || "Connection reset by peer".equals(cause.getMessage())))) {
+		} else if (cause instanceof IOException) {
 			/**
 			 * Only possible way in java until Some other way is exposed by jvm
 			 */
