@@ -164,7 +164,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 					slash = i;
 				break;
 				default :
-					if (i>1 && questionmark > 1 && slash > 1) {
+					if (i>1 && (questionmark > 1 || slash > 1)) {
 						foundAll = true;
 					}
 				break;
