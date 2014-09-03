@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
 import singh.jatinder.server.IEndPoint;
 
 import com.stumbleupon.async.Deferred;
@@ -42,10 +41,9 @@ public class HelloEndpoint implements IEndPoint {
 	byte[] response = "Hello".getBytes();
 	
 	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
-		//ReferenceCountUtil.release(request);
 		ByteBuf buffer = context.alloc().buffer();
 		buffer.writeBytes(response);
-		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);
+		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer, false);
 		response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html");
 		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);

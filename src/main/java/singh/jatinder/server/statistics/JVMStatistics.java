@@ -23,4 +23,8 @@ public class JVMStatistics implements ICollector {
 		return stats;
 	}
 
+    public boolean isDisplayed() {
+        return true;
+    }
+
 }

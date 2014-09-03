@@ -28,4 +28,5 @@ import java.util.Map;
  */
 public interface ICollector {
 	Map<String, Number> getStatistics();
+	boolean isDisplayed();
 }

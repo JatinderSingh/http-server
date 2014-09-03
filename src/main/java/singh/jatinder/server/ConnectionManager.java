@@ -146,4 +146,8 @@ public class ConnectionManager extends ChannelInboundHandlerAdapter implements I
 		return stats;
 	}
 
+    public boolean isDisplayed() {
+        return true;
+    }
+
 }

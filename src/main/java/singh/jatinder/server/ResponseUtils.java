@@ -124,7 +124,7 @@ public class ResponseUtils {
 	  public static Deferred<FullHttpResponse> makeSimpleHtmlResponse(ChannelHandlerContext context, HttpVersion version, HttpResponseStatus status, String message) {
 		  ByteBuf buffer = context.alloc().buffer(message.length());
 		  buffer.writeBytes(message.getBytes());
-		  FullHttpResponse response = new DefaultFullHttpResponse(version, status, buffer);
+		  FullHttpResponse response = new DefaultFullHttpResponse(version, status, buffer, false);
 		  response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
 		  Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		  deferred.callback(response);

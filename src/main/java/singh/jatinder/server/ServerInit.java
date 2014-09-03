@@ -62,11 +62,11 @@ public class ServerInit {
 		requestDistributor.setInitializer(this);
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
 		if (os.startsWith("linux")) {
-            bossGroup = (null==bossGroup) ? new EpollEventLoopGroup():bossGroup;
-            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup():workerGroup;
+            bossGroup = (null==bossGroup) ? new EpollEventLoopGroup(1):bossGroup;
+            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup(Runtime.getRuntime().availableProcessors()):workerGroup;
         } else {
-            bossGroup = (null==bossGroup) ? new NioEventLoopGroup():bossGroup;
-            workerGroup = (null==workerGroup) ? new NioEventLoopGroup():workerGroup;
+            bossGroup = (null==bossGroup) ? new NioEventLoopGroup(1):bossGroup;
+            workerGroup = (null==workerGroup) ? new NioEventLoopGroup(Runtime.getRuntime().availableProcessors()):workerGroup;
         }
 		        
 		try {

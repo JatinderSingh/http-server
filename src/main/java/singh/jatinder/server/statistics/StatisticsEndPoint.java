@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.internal.AppendableCharSequence;
-import io.netty.util.internal.AppendableCharSequence.AppendableCharSequenceOperation;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,7 +59,7 @@ public class StatisticsEndPoint implements IEndPoint {
 	    FullHttpResponse response;
 	    if (uri.length() == 6) {// uri = "/stats"
     		for(Entry<String, ICollector> entry : statistics.entrySet()) {
-    		    buffer.append(entry.getKey()).append("<br>").append("<table>").append(mapToBuffer(entry.getValue().getStatistics())).append("</table>").append("<br>").append("<br>");
+    		    buffer.append(entry.getKey()).append("<br>").append("<table>").append(mapToBuffer(entry.getValue().getStatistics(), entry.getValue().isDisplayed())).append("</table>").append("<br>").append("<br>");
     		}
     		response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, ResponseUtils.makePage(null, "Stats", "Stats", buffer));
 	    } else {
@@ -74,7 +73,7 @@ public class StatisticsEndPoint implements IEndPoint {
 	        switch (splitterLocations.size()) {
 	            case 1:
 	                key1 = uri.substring(splitterLocations.get(0)+1, uri.length()); 
-	                buffer.append(key1).append("<br>").append("<table>").append(mapToBuffer(statistics.get(key1).getStatistics())).append("</table>").append("<br>").append("<br>");
+	                buffer.append(key1).append("<br>").append("<table>").append(mapToBuffer(statistics.get(key1).getStatistics(), true)).append("</table>").append("<br>").append("<br>");
 	                response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, ResponseUtils.makePage(null, "Stats", "Stats", buffer));
 	                break;
 	            case 2:
@@ -91,11 +90,13 @@ public class StatisticsEndPoint implements IEndPoint {
         return deferred;
 	}
 	
-	private StringBuffer mapToBuffer(Map<String, Number> data) {
+	private StringBuffer mapToBuffer(Map<String, Number> data, boolean isDisplayed) {
 		StringBuffer buffer = new StringBuffer();
 		for (Entry<String, Number> entry : data.entrySet()) {
-		    buffer.append("<tr>");
-		    buffer.append("<td>").append(entry.getKey()).append(':').append(entry.getValue()).append("</td>");
+		    if (isDisplayed) {
+    		    buffer.append("<tr>");
+    		    buffer.append("<td>").append(entry.getKey()).append(':').append(entry.getValue()).append("</td>");
+		    }
 		}
 		return buffer;
 	}

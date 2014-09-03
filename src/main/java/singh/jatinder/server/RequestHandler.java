@@ -33,7 +33,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.AppendableCharSequence;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -192,4 +191,8 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 		stats.put("activeHttpRequests", activeHttpRequests.get());
 		return stats;
 	}
+	
+    public boolean isDisplayed() {
+        return true;
+    }
 }
