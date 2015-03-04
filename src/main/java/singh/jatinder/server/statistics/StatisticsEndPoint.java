@@ -92,12 +92,13 @@ public class StatisticsEndPoint implements IEndPoint {
 	
 	private StringBuffer mapToBuffer(Map<String, Number> data, boolean isDisplayed) {
 		StringBuffer buffer = new StringBuffer();
-		for (Entry<String, Number> entry : data.entrySet()) {
-		    if (isDisplayed) {
-    		    buffer.append("<tr>");
-    		    buffer.append("<td>").append(entry.getKey()).append(':').append(entry.getValue()).append("</td>");
-		    }
-		}
+		if (null!=data)
+    		for (Entry<String, Number> entry : data.entrySet()) {
+    		    if (isDisplayed) {
+        		    buffer.append("<tr>");
+        		    buffer.append("<td>").append(entry.getKey().toString()).append(':').append(entry.getValue()).append("</td>");
+    		    }
+    		}
 		return buffer;
 	}
 }

@@ -11,6 +11,7 @@ import java.util.Map;
  *
  */
 public class JVMStatistics implements ICollector {
+    private static final long startTime = System.currentTimeMillis();
 
 	public Map<String, Number> getStatistics() {
 		Map<String, Number> stats = new LinkedHashMap<String, Number>();
@@ -20,6 +21,8 @@ public class JVMStatistics implements ICollector {
 		stats.put("MaxMemory", rt.maxMemory());
 		stats.put("TotalMemory", rt.totalMemory());
 		stats.put("CurrentTimeinmillis", System.currentTimeMillis());
+		stats.put("StartTimeinmillis", startTime);
+		stats.put("UpTimeinmillis", System.currentTimeMillis()-startTime);
 		return stats;
 	}
 
