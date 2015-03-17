@@ -22,10 +22,10 @@ package singh.jatinder.server;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import singh.jatinder.netty.HttpObjectAggregator;
+import singh.jatinder.netty.HttpRequestDecoder;
 import singh.jatinder.server.statistics.StatisticsEndPoint;
 
 /**
@@ -56,7 +56,7 @@ public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 		pipeline.addLast("idleStateHandler", new IdleStateHandler(60, 60, 60));
 		pipeline.addLast("connmgr", connmgr);
 
-		pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192, 8192));
+		pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192, 8192, true));
 		pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
 		

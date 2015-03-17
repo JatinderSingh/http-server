@@ -19,10 +19,10 @@
  */
 package singh.jatinder.server;
 
+import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -38,7 +38,7 @@ import com.stumbleupon.async.Deferred;
 public abstract class ShutDownEndpoint extends RequestHandler implements IEndPoint {
 	
 	private static final String resp = "Accepted ShutDown Request";
-	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
+	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request) {
 		ByteBuf buffer = context.alloc().buffer(resp.length());
 		buffer.writeBytes(resp.getBytes());
 		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);

@@ -22,7 +22,6 @@ package singh.jatinder.server;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -32,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 import singh.jatinder.server.statistics.StatisticsEndPoint;
 
 import com.stumbleupon.async.Deferred;
@@ -52,15 +52,15 @@ public class RequestDistributor extends RequestHandler {
 		endPoints.put("stats", new StatisticsEndPoint());
 	}
 	
-	protected Deferred<FullHttpResponse> process(final ChannelHandlerContext context, final FullHttpRequest request) {
+	protected Deferred<FullHttpResponse> process(final ChannelHandlerContext context, final AggregatedFullHttpRequest request) {
 		Deferred<FullHttpResponse> def = null;
-		final IEndPoint endPoint = endPoints.get(getEndPoint(request));
+		final IEndPoint endPoint = endPoints.get(getEndPoint(request.geturi()));
 		if (null != endPoint) {
 			try {
 				def = endPoint.process(context, request);
 			} catch (Exception e) {
 				def =  new Deferred<FullHttpResponse>();
-				FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseUtils.makePage(null, "INTERNAL ERROR", "Error 500", new StringBuilder(e.toString())));
+				FullHttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseUtils.makePage(null, "INTERNAL ERROR", "Error 500", new StringBuilder(e.toString())));
 				def.callback(response);
 			}
 		} else {

@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 import singh.jatinder.server.IEndPoint;
 import singh.jatinder.server.ResponseUtils;
 
@@ -52,8 +53,8 @@ public class StatisticsEndPoint implements IEndPoint {
 		statistics.put(name, collector);
 	}
 	
-	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request) {
-	    AppendableCharSequence uri = request.getUri();
+	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request) {
+	    AppendableCharSequence uri = request.geturi();
 	    StringBuilder buffer = new StringBuilder();
 	    Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 	    FullHttpResponse response;

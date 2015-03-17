@@ -40,6 +40,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import singh.jatinder.netty.LargeUriHttpRequest;
 import singh.jatinder.server.exception.DefectiveRequest;
 import singh.jatinder.server.statistics.ICollector;
 
@@ -66,8 +68,8 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 	  @Override
 	  public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
 		final long start = System.nanoTime();
-		if (msg instanceof FullHttpRequest) {
-			final FullHttpRequest request = (FullHttpRequest) msg;
+		if (msg instanceof AggregatedFullHttpRequest) {
+			final AggregatedFullHttpRequest request = (AggregatedFullHttpRequest) msg;
 			totalHttpRequests.incrementAndGet();
 			activeHttpRequests.incrementAndGet();
 			Deferred<FullHttpResponse> response = process(ctx, request);
@@ -141,10 +143,9 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 	 * Should always call request.sendReply(String reply) once during whole method
 	 * @param msg
 	 */
-	protected abstract Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request);
+	protected abstract Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request);
 	
-	protected String getEndPoint(final HttpRequest request) {
-		final AppendableCharSequence uri = request.getUri();
+	protected String getEndPoint(final AppendableCharSequence uri) {
 		if (uri.length() < 1) {
 			throw new DefectiveRequest("Empty query");
 		}

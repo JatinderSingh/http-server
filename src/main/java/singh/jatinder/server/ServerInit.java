@@ -37,6 +37,8 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import singh.jatinder.netty.AppendableCharSequenceAddon;
+
 /**
  * @author Jatinder
  *
@@ -50,8 +52,9 @@ public class ServerInit {
 	private EventLoopGroup bossGroup;
 	private EventLoopGroup workerGroup;
 	
-	public void start(int port, RequestHandler handler, boolean enableKeepAlive) {
+	public void start(int port, RequestHandler handler) {
 		LOG.info("Starting.");
+		AppendableCharSequenceAddon.configure();
 		try {
 			System.in.close(); // Release a FD we don't need.
 		} catch (Exception e) {

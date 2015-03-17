@@ -20,8 +20,8 @@
 package singh.jatinder.server;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 
 import com.stumbleupon.async.Deferred;
 
@@ -32,5 +32,5 @@ import com.stumbleupon.async.Deferred;
  * 
  */
 public interface IEndPoint {
-	Deferred<FullHttpResponse> process(ChannelHandlerContext context, FullHttpRequest request);
+	Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request);
 }
