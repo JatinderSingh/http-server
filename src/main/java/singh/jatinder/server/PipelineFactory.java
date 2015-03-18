@@ -23,7 +23,17 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.util.Map;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+
 import singh.jatinder.netty.HttpObjectAggregator;
 import singh.jatinder.netty.HttpRequestDecoder;
 import singh.jatinder.server.statistics.StatisticsEndPoint;
@@ -35,31 +45,54 @@ import singh.jatinder.server.statistics.StatisticsEndPoint;
  */
 public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 
-	private final ConnectionManager connmgr = new ConnectionManager();
-	//private final IdleStateHandler idleState = new IdleStateHandler(5, 5, 10);
+	private static final ConnectionManager connmgr = new ConnectionManager();
 
 	/** Stateless handler for RPCs. */
 	private final RequestHandler handler;
+	private final int idleTimeoutSeconds, maxInitialLineLength, maxHeaderSize, maxChunkSize, maxContentLength; 
+	private final boolean chunkedSupported;
+	private final SSLContext serverContext;
 
 	/**
 	 * Constructor.
+	 * @throws Exception 
 	 */
-	public PipelineFactory(RequestHandler handler) {
+	public PipelineFactory(RequestHandler handler, Map<String, String> configs) throws Exception {
 		this.handler = handler;
 		StatisticsEndPoint.registerStatisticalCollector("ConnectionManager", connmgr);
 		StatisticsEndPoint.registerStatisticalCollector("RequestHandler", handler);
+		idleTimeoutSeconds = Integer.parseInt(configs.get("idleTimeoutSeconds"));
+		maxInitialLineLength = Integer.parseInt(configs.get("maxInitialLineLength"));
+		maxHeaderSize = Integer.parseInt(configs.get("maxHeaderSize"));
+		maxChunkSize = Integer.parseInt(configs.get("maxChunkSize"));
+		maxContentLength = Integer.parseInt(configs.get("maxContentLength"));
+		chunkedSupported = Boolean.parseBoolean(configs.get("chunkedSupported"));
+		boolean sslEnabled = Boolean.parseBoolean(configs.get("isSSL"));
+		if (sslEnabled) {
+            KeyStore ks = KeyStore.getInstance("JKS");
+            ks.load(new FileInputStream(configs.get("keystore")), configs.get("password").toCharArray());
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, configs.get("password").toCharArray());
+            serverContext = SSLContext.getInstance("TLS");
+            serverContext.init(kmf.getKeyManagers(), null, null);
+		} else {
+		    serverContext = null;
+		}
 	}
 
 	@Override
 	public void initChannel(SocketChannel ch) throws Exception {
 		final ChannelPipeline pipeline = ch.pipeline();
-		pipeline.addLast("idleStateHandler", new IdleStateHandler(60, 60, 60));
+		pipeline.addLast("idleStateHandler", new IdleStateHandler(idleTimeoutSeconds, idleTimeoutSeconds, idleTimeoutSeconds));
 		pipeline.addLast("connmgr", connmgr);
-
-		pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192, 8192, true));
-		pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
+		if (null!=serverContext) {
+		    SSLEngine engine = serverContext.createSSLEngine();
+	        engine.setUseClientMode(false);
+	        pipeline.addLast("sslHandler", new SslHandler(engine));
+		}
+		pipeline.addLast("decoder", new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported));
+		pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
 		pipeline.addLast("encoder", new HttpResponseEncoder());
-		
 		pipeline.addLast("handler", handler);
 	}
 }

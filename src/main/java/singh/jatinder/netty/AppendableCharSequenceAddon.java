@@ -20,7 +20,7 @@ public final class AppendableCharSequenceAddon {
     static {
         try {
             CtClass ctclass = ClassPool.getDefault().get("io.netty.util.internal.AppendableCharSequence");
-            CtMethod newmethod = CtNewMethod.make("public void subSequence(int start, int end, io.netty.util.internal.AppendableCharSequence seq) { if(seq.chars.length<end-start) { seq.expand(seq.chars, end-start, seq.chars.length); } seq.pos = end-start; System.arraycopy(chars, start, seq.chars, 0, seq.pos);}",ctclass);
+            CtMethod newmethod = CtNewMethod.make("public void subSequence(int start, int end, io.netty.util.internal.AppendableCharSequence seq) { if(seq.chars.length<end-start) { seq.chars = seq.expand(seq.chars, end-start, seq.chars.length); } seq.pos = end-start; System.arraycopy(chars, start, seq.chars, 0, seq.pos);}",ctclass);
             ctclass.addMethod(newmethod);
             ctclass.writeFile();
 

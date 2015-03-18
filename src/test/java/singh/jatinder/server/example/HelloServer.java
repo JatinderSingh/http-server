@@ -30,10 +30,10 @@ import singh.jatinder.server.ServerInit;
  */
 public class HelloServer {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		RequestDistributor distr = new RequestDistributor();
 		distr.addEndPoint("hello", new HelloEndpoint());
 		distr.addEndPoint("diediedie", new TerminateEndPoint());
-		new ServerInit().start(9900, distr);
+		new ServerInit().start(null, distr);
 	}
 }

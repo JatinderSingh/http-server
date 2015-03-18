@@ -31,8 +31,12 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +56,7 @@ public class ServerInit {
 	private EventLoopGroup bossGroup;
 	private EventLoopGroup workerGroup;
 	
-	public void start(int port, RequestHandler handler) {
+	public void start(String configFile, RequestHandler handler) throws Exception {
 		LOG.info("Starting.");
 		AppendableCharSequenceAddon.configure();
 		try {
@@ -60,61 +64,113 @@ public class ServerInit {
 		} catch (Exception e) {
 			LOG.warn("Failed to close stdin", e);
 		}
-		
+		Properties prop = getProperties(configFile);
 		requestDistributor = handler;
 		requestDistributor.setInitializer(this);
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
 		if (os.startsWith("linux")) {
             bossGroup = (null==bossGroup) ? new EpollEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup(Runtime.getRuntime().availableProcessors()):workerGroup;
+            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup((Runtime.getRuntime().availableProcessors()-1>0)?(Runtime.getRuntime().availableProcessors()-1):1):workerGroup;
         } else {
             bossGroup = (null==bossGroup) ? new NioEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new NioEventLoopGroup(Runtime.getRuntime().availableProcessors()):workerGroup;
+            workerGroup = (null==workerGroup) ? new NioEventLoopGroup((Runtime.getRuntime().availableProcessors()-1>0)?(Runtime.getRuntime().availableProcessors()-1):1):workerGroup;
         }
-		        
-		try {
-			controller = new ServerBootstrap();
-			controller.group(bossGroup, workerGroup);
-			if (os.startsWith("linux")) {
-			    controller.channel(EpollServerSocketChannel.class);
-			    controller.option(EpollChannelOption.TCP_CORK, true);
-			} else {
-			    controller.channel(NioServerSocketChannel.class);
-			}
-			controller.childHandler(new PipelineFactory(handler));
-			controller.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-			controller.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
-			controller.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);
-			controller.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
-			controller.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1 * 1024);
-			controller.option(ChannelOption.SO_KEEPALIVE, true);
-			controller.option(ChannelOption.SO_REUSEADDR, true);
-			controller.option(ChannelOption.TCP_NODELAY, true);
-			controller.option(ChannelOption.SO_LINGER, 0);
-			controller.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-			controller.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
-			controller.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 10);
-			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
-			controller.childOption(ChannelOption.SO_REUSEADDR, true);
-			controller.childOption(ChannelOption.TCP_NODELAY, true);
-			controller.childOption(ChannelOption.SO_LINGER, 0);
-			controller.childOption(ChannelOption.SO_RCVBUF, 6291456);
-			
-			
-			final InetSocketAddress addr = new InetSocketAddress(port);
-			ChannelFuture future = controller.bind(addr).sync();
-			if (future.isSuccess())
-				LOG.info("Server Ready to serve on " + addr);
-			else 
-				throw new Exception("Address already in use");
-		} catch (Throwable t) {
-			bossGroup.shutdownGracefully();
-			workerGroup.shutdownGracefully();
-			throw new RuntimeException("Initialization failed", t);
+		
+		String[] servers = prop.getProperty("servers").split(",");
+		for (String server: servers) {
+		
+    		try {
+    			controller = new ServerBootstrap();
+    			controller.group(bossGroup, workerGroup);
+    			if (os.startsWith("linux")) {
+    			    controller.channel(EpollServerSocketChannel.class);
+    			    controller.option(EpollChannelOption.TCP_CORK, true);
+    			} else {
+    			    controller.channel(NioServerSocketChannel.class);
+    			}
+    			controller.childHandler(new PipelineFactory(handler, getPipelineConfig(prop, server)));
+    			controller.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+    			controller.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+    			controller.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getInt(prop, server, "connectTimeoutMillis"));
+    			controller.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
+    			controller.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1 * 1024);
+    			controller.option(ChannelOption.SO_KEEPALIVE, getBoolean(prop, server, "SOKeepalive"));
+    			controller.option(ChannelOption.SO_REUSEADDR, true);
+    			controller.option(ChannelOption.TCP_NODELAY, true);
+    			controller.option(ChannelOption.SO_LINGER, 0);
+    			controller.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+    			controller.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
+    			controller.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 10);
+    			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
+    			controller.childOption(ChannelOption.SO_REUSEADDR, true);
+    			controller.childOption(ChannelOption.TCP_NODELAY, true);
+    			controller.childOption(ChannelOption.SO_LINGER, 0);
+    			controller.childOption(ChannelOption.SO_RCVBUF, 6291456);
+    			
+    			final InetSocketAddress addr = new InetSocketAddress(getInt(prop, server, "port"));
+    			ChannelFuture future = controller.bind(addr).sync();
+    			if (future.isSuccess())
+    				LOG.info("Server Ready to serve on " + addr);
+    			else 
+    				throw new Exception("Address already in use");
+    		} catch (Throwable t) {
+    			bossGroup.shutdownGracefully();
+    			workerGroup.shutdownGracefully();
+    			throw new RuntimeException("Initialization failed", t);
+    		}
 		}
 	}
 	
-	protected EventLoopGroup getBossGroup() {
+    private boolean getBoolean(Properties prop, String server, String type) throws Exception {
+        String bool = prop.getProperty(server+"."+type);
+        if (null!=bool && !bool.isEmpty()) {
+            return Boolean.parseBoolean(bool);
+        }
+        else throw new Exception(type+" Keepalive not defined for server "+ server);
+    }
+
+    private int getInt(Properties prop, String server, String type) throws Exception {
+        String port = prop.getProperty(server+"."+type);
+        if (null!=port && !port.isEmpty()) {
+            return Integer.parseInt(port);
+        }
+        else throw new Exception(type+" not defined for server "+ server);
+    }
+    
+    private Map<String, String> getPipelineConfig(Properties prop, String server) throws Exception {
+        Map<String, String> configs = new HashMap<String, String>();
+        configs.put("connectTimeoutMillis", Integer.toString(getInt(prop, server, "connectTimeoutMillis")));
+        configs.put("idleTimeoutSeconds", Integer.toString(getInt(prop, server, "idleTimeoutSeconds")));
+        configs.put("maxInitialLineLength", Integer.toString(getInt(prop, server, "maxInitialLineLength")));
+        configs.put("maxHeaderSize", Integer.toString(getInt(prop, server, "maxHeaderSize")));
+        configs.put("maxChunkSize", Integer.toString(getInt(prop, server, "maxChunkSize")));
+        configs.put("maxContentLength", Integer.toString(getInt(prop, server, "maxContentLength")));
+        configs.put("chunkedSupported", Boolean.toString(getBoolean(prop, server, "chunkedSupported")));
+        boolean isSSL = getBoolean(prop, server, "isSSL");
+        configs.put("isSSL", Boolean.toString(isSSL));
+        if (isSSL) {
+            String keystore = prop.getProperty(server+".keystore");
+            if (null!=keystore && !keystore.isEmpty())
+                configs.put("keystore", keystore);
+            else
+                throw new Exception("keyStore not defined for server "+ server);
+            String password = prop.getProperty(server+".keystorePassword");
+            if (null!=password && !password.isEmpty())
+                configs.put("password", password);
+            else
+                throw new Exception("keystorePasswords not defined for server "+ server);
+        }
+        return configs;
+    }
+
+    private Properties getProperties(String configFile) throws Exception {
+        Properties properties = new Properties();
+        InputStream is = this.getClass().getResourceAsStream((configFile==null)?"/config.properties":configFile.isEmpty()?"/config.properties":configFile);
+        properties.load(is);
+        return properties;
+    }
+
+    protected EventLoopGroup getBossGroup() {
         return bossGroup;
     }
 	

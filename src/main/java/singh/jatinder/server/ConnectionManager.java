@@ -114,11 +114,9 @@ public class ConnectionManager extends ChannelInboundHandlerAdapter implements I
 			/**
 			 * Only possible way in java until Some other way is exposed by jvm
 			 */
-			registeredChannels.decrementAndGet();
 			ctx.channel().close();
 		} else {
 			LOG.error("Unexpected exception from downstream for {} ", ctx.channel(), cause);
-			registeredChannels.decrementAndGet();
 			ctx.channel().close();
 		}
 		exceptionsCount.incrementAndGet();
