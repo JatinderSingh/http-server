@@ -55,6 +55,7 @@ public class ServerInit {
 	private volatile RequestHandler requestDistributor;
 	private EventLoopGroup bossGroup;
 	private EventLoopGroup workerGroup;
+	private static final int NUM_WORKER_THREADS=Math.max(Runtime.getRuntime().availableProcessors()-1, 2);
 	
 	public void start(String configFile, RequestHandler handler) throws Exception {
 		LOG.info("Starting.");
@@ -70,10 +71,10 @@ public class ServerInit {
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
 		if (os.startsWith("linux")) {
             bossGroup = (null==bossGroup) ? new EpollEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup((Runtime.getRuntime().availableProcessors()-1>0)?(Runtime.getRuntime().availableProcessors()-1):1):workerGroup;
+            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup(NUM_WORKER_THREADS):workerGroup;
         } else {
             bossGroup = (null==bossGroup) ? new NioEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new NioEventLoopGroup((Runtime.getRuntime().availableProcessors()-1>0)?(Runtime.getRuntime().availableProcessors()-1):1):workerGroup;
+            workerGroup = (null==workerGroup) ? new NioEventLoopGroup(NUM_WORKER_THREADS):workerGroup;
         }
 		
 		String[] servers = prop.getProperty("servers").split(",");
