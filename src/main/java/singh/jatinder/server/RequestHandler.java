@@ -18,7 +18,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -40,10 +40,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import singh.jatinder.netty.LargeUriHttpRequest;
-import singh.jatinder.server.exception.DefectiveRequest;
-import singh.jatinder.server.statistics.ICollector;
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.netty.LargeUriHttpRequest;
+import io.maelstorm.server.exception.DefectiveRequest;
+import io.maelstorm.server.statistics.ICollector;
 
 import com.stumbleupon.async.Callback;
 import com.stumbleupon.async.Deferred;

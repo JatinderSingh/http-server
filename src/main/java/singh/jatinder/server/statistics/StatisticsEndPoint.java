@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server.statistics;
+package io.maelstorm.server.statistics;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -32,9 +32,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import singh.jatinder.server.IEndPoint;
-import singh.jatinder.server.ResponseUtils;
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.server.IEndPoint;
+import io.maelstorm.server.ResponseUtils;
 
 import com.stumbleupon.async.Deferred;
 

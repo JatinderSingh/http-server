@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,8 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import singh.jatinder.server.statistics.StatisticsEndPoint;
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.server.statistics.StatisticsEndPoint;
 
 import com.stumbleupon.async.Deferred;
 

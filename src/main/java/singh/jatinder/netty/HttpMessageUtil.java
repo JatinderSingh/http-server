@@ -1,4 +1,4 @@
-package singh.jatinder.netty;
+package io.maelstorm.netty;
 
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;

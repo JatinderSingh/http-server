@@ -1,7 +1,7 @@
 /**
  * 
  */
-package singh.jatinder.server.statistics;
+package io.maelstorm.server.statistics;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

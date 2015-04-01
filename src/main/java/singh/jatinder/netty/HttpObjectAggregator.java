@@ -1,4 +1,4 @@
-package singh.jatinder.netty;
+package io.maelstorm.netty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;

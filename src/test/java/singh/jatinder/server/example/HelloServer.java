@@ -17,10 +17,10 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server.example;
+package io.maelstorm.server.example;
 
-import singh.jatinder.server.RequestDistributor;
-import singh.jatinder.server.ServerInit;
+import io.maelstorm.server.RequestDistributor;
+import io.maelstorm.server.ServerInit;
 
 /**
  * @author Jatinder

@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -34,9 +34,9 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
-import singh.jatinder.netty.HttpObjectAggregator;
-import singh.jatinder.netty.HttpRequestDecoder;
-import singh.jatinder.server.statistics.StatisticsEndPoint;
+import io.maelstorm.netty.HttpObjectAggregator;
+import io.maelstorm.netty.HttpRequestDecoder;
+import io.maelstorm.server.statistics.StatisticsEndPoint;
 
 /**
  * @author Jatinder

@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import com.stumbleupon.async.Deferred;
 

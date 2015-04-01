@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -41,7 +41,7 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import singh.jatinder.netty.AppendableCharSequenceAddon;
+import io.maelstorm.netty.AppendableCharSequenceAddon;
 
 /**
  * @author Jatinder

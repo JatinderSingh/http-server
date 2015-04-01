@@ -17,7 +17,7 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server.exception;
+package io.maelstorm.server.exception;
 
 /**
  * @author Jatinder

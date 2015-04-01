@@ -17,11 +17,11 @@
  * License along with this library; If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package singh.jatinder.server;
+package io.maelstorm.server;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
-import singh.jatinder.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 
 import com.stumbleupon.async.Deferred;
 

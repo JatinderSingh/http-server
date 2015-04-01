@@ -1,7 +1,7 @@
 /**
  * 
  */
-package singh.jatinder.netty;
+package io.maelstorm.netty;
 
 import java.lang.reflect.Method;
 

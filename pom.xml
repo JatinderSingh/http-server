@@ -1,16 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>singh.jatinder</groupId>
+  <groupId>io.maelstorm</groupId>
   <artifactId>http-server</artifactId>
   <version>2.4-SNAPSHOT</version>
   <name>http-server</name>
   <description>Simple non blocking [waitless response]</description>
-  <repositories>
-  		<repository>
-			<id>miq-nexus-hudson-repo</id>
-			<url>http://build.mediaiqdigital.com/nexus/content/repositories/Hudson/</url>
-		</repository>
-  </repositories>
   <dependencies>
   	<dependency>
 		<groupId>org.slf4j</groupId>

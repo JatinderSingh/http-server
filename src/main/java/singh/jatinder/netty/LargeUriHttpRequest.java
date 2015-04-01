@@ -1,7 +1,7 @@
 /**
  * 
  */
-package singh.jatinder.netty;
+package io.maelstorm.netty;
 
 import io.netty.handler.codec.http.DefaultHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;

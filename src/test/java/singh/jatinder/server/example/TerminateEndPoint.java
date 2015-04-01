@@ -1,7 +1,7 @@
 /**
  * 
  */
-package singh.jatinder.server.example;
+package io.maelstorm.server.example;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -9,7 +9,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 
 import com.stumbleupon.async.Deferred;
 
-import singh.jatinder.server.ShutDownEndpoint;
+import io.maelstorm.server.ShutDownEndpoint;
 
 /**
  * @author Jatinder
