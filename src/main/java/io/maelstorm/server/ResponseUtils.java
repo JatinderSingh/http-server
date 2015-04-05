@@ -84,7 +84,7 @@ public class ResponseUtils {
 
 	  private static final String PAGE_FOOTER =
 	    "<table width=100% cellpadding=0 cellspacing=0>"
-	    + "<tr><td class=subg><font color=#507e9b size=2>© Simple Http-Server<img alt=\"\" width=1 height=3></td></tr>"
+	    + "<tr><td class=subg><font color=#507e9b size=2>MaelStorm<img alt=\"\" width=1 height=3></td></tr>"
 	    + "</table></body></html>";
 
 	  private static final int BOILERPLATE_LENGTH =
