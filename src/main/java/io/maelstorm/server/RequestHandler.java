@@ -87,7 +87,8 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 					response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
 					// FIXME response.setContent(arg.getMessage().getBytes(arg0));
 					sendResponse(ctx, response, request);
-					LOG.debug(exceptionLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
+					if (LOG.isDebugEnabled())
+					    LOG.debug(exceptionLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
 					LOG.error(arg.getLocalizedMessage(), arg);
 					activeHttpRequests.decrementAndGet();
 					return null;
