@@ -17,6 +17,7 @@ import javassist.bytecode.DuplicateMemberException;
  */
 public final class AppendableCharSequenceAddon {
     private static Method subsequence;
+    private static final ThreadLocal<Object[]> cachedVarargs = new ThreadLocal<>();
     static {
         try {
             Class clazz = null;
@@ -40,12 +41,19 @@ public final class AppendableCharSequenceAddon {
     }
     
     public static void configure () {
-        
+        if (null==cachedVarargs.get()) {
+            cachedVarargs.set(new Object[3]);
+        }
     }
     
     public static void invokeSubsequence(io.netty.util.internal.AppendableCharSequence source, int start, int end, io.netty.util.internal.AppendableCharSequence sequence) {
+        configure();
         try {
-            subsequence.invoke(source, start, end, sequence);
+            Object[] varArgs = cachedVarargs.get();
+            varArgs[0] = start;
+            varArgs[1] = end;
+            varArgs[2] = sequence;
+            subsequence.invoke(source, varArgs);
         } catch (Exception e) {
             // TODO Auto-generated catch block
             System.err.println(e);
