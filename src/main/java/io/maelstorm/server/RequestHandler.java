@@ -20,12 +20,14 @@
  */
 package io.maelstorm.server;
 
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.server.exception.DefectiveRequest;
+import io.maelstorm.server.statistics.ICollector;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -39,11 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import io.maelstorm.netty.LargeUriHttpRequest;
-import io.maelstorm.server.exception.DefectiveRequest;
-import io.maelstorm.server.statistics.ICollector;
 
 import com.stumbleupon.async.Callback;
 import com.stumbleupon.async.Deferred;
@@ -76,7 +73,8 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			response.addCallbacks(new Callback<Object, FullHttpResponse>() {
 				public Object call(FullHttpResponse response) throws Exception {
 					sendResponse(ctx, response, request);
-					LOG.trace(normalLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
+					if (LOG.isDebugEnabled())
+					    LOG.trace(normalLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
 					activeHttpRequests.decrementAndGet();
 					return null;
 				}
