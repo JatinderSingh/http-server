@@ -335,7 +335,48 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
     }
     
     protected HttpMessage createMessage(AppendableCharSequence method, AppendableCharSequence version, AppendableCharSequence uri) throws Exception {
-        return new LargeUriHttpRequest(HttpVersion.valueOf(version.toString()), HttpMethod.valueOf(method.toString()), uri, validateHeaders);
+        return new LargeUriHttpRequest(getHttpVersion(version), getMethod(method), uri, validateHeaders);
+    }
+    
+    private static HttpVersion getHttpVersion(AppendableCharSequence version) {
+        if ('H' == version.charAt(0) && 'T' == version.charAt(1) && 'T' == version.charAt(2) && 'P' == version.charAt(3) && '/' == version.charAt(4) && '1' == version.charAt(5) && '.' == version.charAt(6)){
+            if ('0' == version.charAt(7))
+                return HttpVersion.HTTP_1_0;
+            if ('1' == version.charAt(7))
+                return HttpVersion.HTTP_1_1;
+        }
+        return null;
+    }
+    
+    private static HttpMethod getMethod(AppendableCharSequence method) {
+        switch (method.charAt(0)){
+            case 'O' :
+                if ('P' == method.charAt(1) && 'T' == method.charAt(2) && 'I' == method.charAt(3) && 'O' == method.charAt(4) && 'N' == method.charAt(5) && 'S' == method.charAt(6))
+                    return HttpMethod.OPTIONS;
+            case 'H' :
+                if ('E' == method.charAt(1) && 'A' == method.charAt(2) && 'D' == method.charAt(3))
+                    return HttpMethod.HEAD;
+            case 'G' :
+                if ('E' == method.charAt(1) && 'T' == method.charAt(2))
+                    return HttpMethod.GET;
+            case 'T' :
+                if ('R' == method.charAt(1) && 'A' == method.charAt(2) && 'C' == method.charAt(3) && 'E' == method.charAt(4))
+                    return HttpMethod.TRACE;
+            case 'D' :
+                if ('E' == method.charAt(1) && 'L' == method.charAt(2) && 'E' == method.charAt(3) && 'T' == method.charAt(4) && 'E' == method.charAt(5))
+                    return HttpMethod.DELETE;
+            case 'C' :
+                if ('O' == method.charAt(1) && 'N' == method.charAt(2) && 'N' == method.charAt(3) && 'E' == method.charAt(4) && 'C' == method.charAt(5) && 'T' == method.charAt(6))
+                    return HttpMethod.CONNECT;
+            case 'P' :
+                if ('U' == method.charAt(1) && 'T' == method.charAt(2))
+                    return HttpMethod.PUT;
+                if ('O' == method.charAt(1) && 'S' == method.charAt(2) && 'T' == method.charAt(3))
+                    return HttpMethod.POST;
+                if ('A' == method.charAt(1) && 'T' == method.charAt(2) && 'C' == method.charAt(3) && 'H' == method.charAt(4))
+                    return HttpMethod.PATCH;
+        }
+        return HttpMethod.valueOf(method.toString());
     }
     
     private void resetNow() {
