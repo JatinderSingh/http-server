@@ -20,21 +20,6 @@
  */
 package io.maelstorm.server;
 
-import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import io.maelstorm.server.exception.DefectiveRequest;
-import io.maelstorm.server.statistics.ICollector;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.AppendableCharSequence;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -44,6 +29,23 @@ import org.slf4j.LoggerFactory;
 
 import com.stumbleupon.async.Callback;
 import com.stumbleupon.async.Deferred;
+
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.server.exception.DefectiveRequest;
+import io.maelstorm.server.statistics.ICollector;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.AppendableCharSequence;
 
 /**
  * @author Jatinder
@@ -74,7 +76,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 				public Object call(FullHttpResponse response) throws Exception {
 					sendResponse(ctx, response, request);
 					if (LOG.isDebugEnabled())
-					    LOG.trace(normalLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
+					    LOG.debug(normalLogTemplate, request.getUri(), request.getMethod(), (System.nanoTime() - start) / 1000000 );
 					activeHttpRequests.decrementAndGet();
 					return null;
 				}
@@ -82,7 +84,7 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 				public Object call(Exception arg) throws Exception {
 					totalExceptions.incrementAndGet();
 					FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-					response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+					response.headers().add(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 					// FIXME response.setContent(arg.getMessage().getBytes(arg0));
 					sendResponse(ctx, response, request);
 					if (LOG.isDebugEnabled())
@@ -101,8 +103,8 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 	  }
 
 	void setInitializer(ServerInit initialiser) {
-		if (null == this.initializer) {
-			this.initializer = initialiser;
+		if (null == RequestHandler.initializer) {
+			RequestHandler.initializer = initialiser;
 		}
 	}
   
@@ -111,10 +113,10 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 		if (!ctx.channel().isActive()) {
 			return;
 		}
-		final boolean keepalive = HttpHeaders.isKeepAlive(request);
+		final boolean keepalive = HttpUtil.isKeepAlive(request);
 		if (keepalive) {
-			HttpHeaders.setContentLength(response, response.content().readableBytes());
-			response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+			response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+			response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
 		}
 		final ChannelFuture future = ctx.write(response);
 		ctx.flush();

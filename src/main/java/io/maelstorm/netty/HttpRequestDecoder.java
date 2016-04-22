@@ -6,7 +6,7 @@ package io.maelstorm.netty;
 import java.util.List;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufProcessor;
+import io.netty.util.ByteProcessor;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
@@ -15,13 +15,15 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpExpectationFailedEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.internal.AppendableCharSequence;
@@ -91,12 +93,18 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
         this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
     }
 
+    protected HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
+    }
+    
     /**
      * Creates a new instance with the specified parameters.
      */
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
-            boolean chunkedSupported, boolean validateHeaders) {
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
 
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -116,7 +124,7 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
-        AppendableCharSequence seq = new AppendableCharSequence(128);
+        AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
         lineParser = new LineParser(seq, maxInitialLineLength);
         headerParser = new HeaderParser(seq, maxHeaderSize);
     }
@@ -334,46 +342,134 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
         }
     }
     
+    @Override
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        super.decodeLast(ctx, in, out);
+
+        // Handle the last unfinished message.
+        if (message != null) {
+            boolean chunked = HttpUtil.isTransferEncodingChunked(message);
+            if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
+                // End of connection.
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                reset();
+                return;
+            }
+            // Check if the closure of the connection signifies the end of the content.
+            boolean prematureClosure;
+            if (isDecodingRequest() || chunked) {
+                // The last request did not wait for a response.
+                prematureClosure = true;
+            } else {
+                // Compare the length of the received content and the 'Content-Length' header.
+                // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
+                // connection, so it is perfectly fine.
+                prematureClosure = contentLength() > 0;
+            }
+            resetNow();
+
+            if (!prematureClosure) {
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+            }
+        }
+    }
+    
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof HttpExpectationFailedEvent) {
+            switch (currentState) {
+            case READ_FIXED_LENGTH_CONTENT:
+            case READ_VARIABLE_LENGTH_CONTENT:
+            case READ_CHUNK_SIZE:
+                reset();
+                break;
+            default:
+                break;
+            }
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+        if (msg instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) msg;
+            int code = res.status().code();
+
+            // Correctly handle return codes of 1xx.
+            //
+            // See:
+            //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
+            //     - https://github.com/netty/netty/issues/222
+            if (code >= 100 && code < 200) {
+                // One exception: Hixie 76 websocket handshake response
+                return !(code == 101 && !res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT)
+                         && res.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true));
+            }
+
+            switch (code) {
+            case 204: case 205: case 304:
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Resets the state of the decoder so that it is ready to decode a new message.
+     * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
+     */
+    public void reset() {
+        resetRequested = true;
+    }
+    
     protected HttpMessage createMessage(AppendableCharSequence method, AppendableCharSequence version, AppendableCharSequence uri) throws Exception {
         return new LargeUriHttpRequest(getHttpVersion(version), getMethod(method), uri, validateHeaders);
     }
     
+    protected HttpMessage createInvalidMessage() {
+        return new LargeUriHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, new AppendableCharSequence(12).append("/bad-request"), validateHeaders);
+    }
+
+    protected boolean isDecodingRequest() {
+        return true;
+    }
+    
     private static HttpVersion getHttpVersion(AppendableCharSequence version) {
-        if ('H' == version.charAt(0) && 'T' == version.charAt(1) && 'T' == version.charAt(2) && 'P' == version.charAt(3) && '/' == version.charAt(4) && '1' == version.charAt(5) && '.' == version.charAt(6)){
-            if ('0' == version.charAt(7))
+        if ('H' == version.charAtUnsafe(0) && 'T' == version.charAtUnsafe(1) && 'T' == version.charAtUnsafe(2) && 'P' == version.charAtUnsafe(3) && '/' == version.charAtUnsafe(4) && '1' == version.charAtUnsafe(5) && '.' == version.charAtUnsafe(6)){
+            if ('0' == version.charAtUnsafe(7))
                 return HttpVersion.HTTP_1_0;
-            if ('1' == version.charAt(7))
+            if ('1' == version.charAtUnsafe(7))
                 return HttpVersion.HTTP_1_1;
         }
         return null;
     }
     
     private static HttpMethod getMethod(AppendableCharSequence method) {
-        switch (method.charAt(0)){
+        switch (method.charAtUnsafe(0)){
             case 'O' :
-                if ('P' == method.charAt(1) && 'T' == method.charAt(2) && 'I' == method.charAt(3) && 'O' == method.charAt(4) && 'N' == method.charAt(5) && 'S' == method.charAt(6))
+                if ('P' == method.charAtUnsafe(1) && 'T' == method.charAtUnsafe(2) && 'I' == method.charAtUnsafe(3) && 'O' == method.charAtUnsafe(4) && 'N' == method.charAtUnsafe(5) && 'S' == method.charAtUnsafe(6))
                     return HttpMethod.OPTIONS;
             case 'H' :
-                if ('E' == method.charAt(1) && 'A' == method.charAt(2) && 'D' == method.charAt(3))
+                if ('E' == method.charAtUnsafe(1) && 'A' == method.charAtUnsafe(2) && 'D' == method.charAtUnsafe(3))
                     return HttpMethod.HEAD;
             case 'G' :
-                if ('E' == method.charAt(1) && 'T' == method.charAt(2))
+                if ('E' == method.charAtUnsafe(1) && 'T' == method.charAtUnsafe(2))
                     return HttpMethod.GET;
             case 'T' :
-                if ('R' == method.charAt(1) && 'A' == method.charAt(2) && 'C' == method.charAt(3) && 'E' == method.charAt(4))
+                if ('R' == method.charAtUnsafe(1) && 'A' == method.charAtUnsafe(2) && 'C' == method.charAtUnsafe(3) && 'E' == method.charAtUnsafe(4))
                     return HttpMethod.TRACE;
             case 'D' :
-                if ('E' == method.charAt(1) && 'L' == method.charAt(2) && 'E' == method.charAt(3) && 'T' == method.charAt(4) && 'E' == method.charAt(5))
+                if ('E' == method.charAtUnsafe(1) && 'L' == method.charAtUnsafe(2) && 'E' == method.charAtUnsafe(3) && 'T' == method.charAtUnsafe(4) && 'E' == method.charAtUnsafe(5))
                     return HttpMethod.DELETE;
             case 'C' :
-                if ('O' == method.charAt(1) && 'N' == method.charAt(2) && 'N' == method.charAt(3) && 'E' == method.charAt(4) && 'C' == method.charAt(5) && 'T' == method.charAt(6))
+                if ('O' == method.charAtUnsafe(1) && 'N' == method.charAtUnsafe(2) && 'N' == method.charAtUnsafe(3) && 'E' == method.charAtUnsafe(4) && 'C' == method.charAtUnsafe(5) && 'T' == method.charAtUnsafe(6))
                     return HttpMethod.CONNECT;
             case 'P' :
-                if ('U' == method.charAt(1) && 'T' == method.charAt(2))
+                if ('U' == method.charAtUnsafe(1) && 'T' == method.charAtUnsafe(2))
                     return HttpMethod.PUT;
-                if ('O' == method.charAt(1) && 'S' == method.charAt(2) && 'T' == method.charAt(3))
+                if ('O' == method.charAtUnsafe(1) && 'S' == method.charAtUnsafe(2) && 'T' == method.charAtUnsafe(3))
                     return HttpMethod.POST;
-                if ('A' == method.charAt(1) && 'T' == method.charAt(2) && 'C' == method.charAt(3) && 'H' == method.charAt(4))
+                if ('A' == method.charAtUnsafe(1) && 'T' == method.charAtUnsafe(2) && 'C' == method.charAtUnsafe(3) && 'H' == method.charAtUnsafe(4))
                     return HttpMethod.PATCH;
         }
         return HttpMethod.valueOf(method.toString());
@@ -490,9 +586,9 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
         State nextState;
 
         if (isContentAlwaysEmpty(message)) {
-            HttpHeaderUtil.setTransferEncodingChunked(message, false);
+            HttpUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpHeaderUtil.isTransferEncodingChunked(message)) {
+        } else if (HttpUtil.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -504,7 +600,7 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
 
     private long contentLength() {
         if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpHeaderUtil.getContentLength(message, -1);
+            contentLength = HttpUtil.getContentLength(message, -1);
         }
         return contentLength;
     }
@@ -538,9 +634,9 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
                 } else {
                     splitHeader(line);
                     CharSequence headerName = name;
-                    if (!HttpHeaderNames.CONTENT_LENGTH.equalsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRANSFER_ENCODING.equalsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRAILER.equalsIgnoreCase(headerName)) {
+                    if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
                         trailer.trailingHeaders().add(headerName, value);
                     }
                     lastHeader = name;
@@ -638,7 +734,7 @@ public class HttpRequestDecoder extends io.netty.handler.codec.http.HttpRequestD
         return result;
     }
 
-    private static class HeaderParser implements ByteBufProcessor {
+    private static class HeaderParser implements ByteProcessor {
         private final AppendableCharSequence seq;
         private final int maxLength;
         private int size;

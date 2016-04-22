@@ -15,6 +15,7 @@ import javassist.bytecode.DuplicateMemberException;
  * @author Jatinder
  *
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public final class AppendableCharSequenceAddon {
     private static Method subsequence;
     private static final ThreadLocal<Object[]> cachedVarargs = new ThreadLocal<>();

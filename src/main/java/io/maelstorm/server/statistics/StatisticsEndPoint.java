@@ -92,7 +92,7 @@ public class StatisticsEndPoint implements IEndPoint {
 	}
 	
 	private StringBuffer mapToBuffer(Map<String, Number> data, boolean isDisplayed) {
-		StringBuffer buffer = new StringBuffer();
+		StringBuffer buffer = new StringBuffer(data.size()*30);
 		if (null!=data)
     		for (Entry<String, Number> entry : data.entrySet()) {
     		    if (isDisplayed) {

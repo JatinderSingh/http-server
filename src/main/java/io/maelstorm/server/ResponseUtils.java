@@ -27,7 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -46,7 +46,7 @@ public class ResponseUtils {
 	
 	/** Precomputed 404 response. */
 	public static final FullHttpResponse PAGE_NOT_FOUND = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.NOT_FOUND, makePage(null, "Page Not Found", "Error 404",
-			new StringBuilder("<blockquote> <h1>Page Not Found</h1> The requested URL was not found on this server.</blockquote>")));
+			new StringBuilder("<blockquote> <h1>Page Not Found</h1> The requested URL was not found on this server.</blockquote>"))).retain(10000);
 	
 	
 	  // -------------------------------------------- //
@@ -125,7 +125,7 @@ public class ResponseUtils {
 		  ByteBuf buffer = context.alloc().buffer(message.length());
 		  buffer.writeBytes(message.getBytes());
 		  FullHttpResponse response = new DefaultFullHttpResponse(version, status, buffer, false);
-		  response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		  response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
 		  Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		  deferred.callback(response);
 		  return deferred;

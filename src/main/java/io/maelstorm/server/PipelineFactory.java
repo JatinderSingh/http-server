@@ -23,15 +23,17 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.util.Map;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
 import io.maelstorm.netty.HttpObjectAggregator;
@@ -51,7 +53,7 @@ public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 	private final RequestHandler handler;
 	private final int idleTimeoutSeconds, maxInitialLineLength, maxHeaderSize, maxChunkSize, maxContentLength; 
 	private final boolean chunkedSupported;
-	private final SSLContext serverContext;
+	private final SslContext sslContext;
 
 	/**
 	 * Constructor.
@@ -69,14 +71,9 @@ public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 		chunkedSupported = Boolean.parseBoolean(configs.get("chunkedSupported"));
 		boolean sslEnabled = Boolean.parseBoolean(configs.get("isSSL"));
 		if (sslEnabled) {
-            KeyStore ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream(configs.get("keystore")), configs.get("password").toCharArray());
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, configs.get("password").toCharArray());
-            serverContext = SSLContext.getInstance("TLS");
-            serverContext.init(kmf.getKeyManagers(), null, null);
+            sslContext = SslContextBuilder.forServer(new File(configs.get("keyCertChainFile")), new File(configs.get("pkeyFile"))).build();
 		} else {
-		    serverContext = null;
+			sslContext = null;
 		}
 	}
 
@@ -85,10 +82,8 @@ public class PipelineFactory extends ChannelInitializer<SocketChannel> {
 		final ChannelPipeline pipeline = ch.pipeline();
 		pipeline.addLast("idleStateHandler", new IdleStateHandler(idleTimeoutSeconds, idleTimeoutSeconds, idleTimeoutSeconds));
 		pipeline.addLast("connmgr", connmgr);
-		if (null!=serverContext) {
-		    SSLEngine engine = serverContext.createSSLEngine();
-	        engine.setUseClientMode(false);
-	        pipeline.addLast("sslHandler", new SslHandler(engine));
+		if (null!=sslContext) {
+	        pipeline.addLast("sslHandler", sslContext.newHandler(ch.alloc()));
 		}
 		pipeline.addLast("decoder", new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported));
 		pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));

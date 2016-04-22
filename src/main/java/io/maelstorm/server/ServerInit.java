@@ -19,18 +19,6 @@
  */
 package io.maelstorm.server;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.AdaptiveRecvByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -42,6 +30,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.maelstorm.netty.AppendableCharSequenceAddon;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultMessageSizeEstimator;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * @author Jatinder
@@ -92,16 +93,15 @@ public class ServerInit {
     			controller.childHandler(new PipelineFactory(handler, getPipelineConfig(prop, server)));
     			controller.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
     			controller.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+    			controller.option(ChannelOption.MESSAGE_SIZE_ESTIMATOR, DefaultMessageSizeEstimator.DEFAULT);
     			controller.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getInt(prop, server, "connectTimeoutMillis"));
-    			controller.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
-    			controller.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1 * 1024);
+    			controller.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1 * 1024, 64 *1024));
     			controller.option(ChannelOption.SO_KEEPALIVE, getBoolean(prop, server, "SOKeepalive"));
     			controller.option(ChannelOption.SO_REUSEADDR, true);
     			controller.option(ChannelOption.TCP_NODELAY, true);
     			controller.option(ChannelOption.SO_LINGER, 0);
     			controller.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-    			controller.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024);
-    			controller.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 10);
+    			controller.childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1 * 1024, 64 *1024));
     			controller.childOption(ChannelOption.SO_KEEPALIVE, true);
     			controller.childOption(ChannelOption.SO_REUSEADDR, true);
     			controller.childOption(ChannelOption.TCP_NODELAY, true);
@@ -150,16 +150,16 @@ public class ServerInit {
         boolean isSSL = getBoolean(prop, server, "isSSL");
         configs.put("isSSL", Boolean.toString(isSSL));
         if (isSSL) {
-            String keystore = prop.getProperty(server+".keystore");
-            if (null!=keystore && !keystore.isEmpty())
-                configs.put("keystore", keystore);
+            String keyCertChainFile = prop.getProperty(server+".keyCertChainFile");
+            if (null!=keyCertChainFile && !keyCertChainFile.isEmpty())
+                configs.put("keyCertChainFile", keyCertChainFile);
             else
                 throw new Exception("keyStore not defined for server "+ server);
-            String password = prop.getProperty(server+".keystorePassword");
-            if (null!=password && !password.isEmpty())
-                configs.put("password", password);
+            String pkeyFile = prop.getProperty(server+".pkeyFile");
+            if (null!=pkeyFile && !pkeyFile.isEmpty())
+                configs.put("pkeyFile", pkeyFile);
             else
-                throw new Exception("keystorePasswords not defined for server "+ server);
+                throw new Exception("pkeyFile not defined for server "+ server);
         }
         return configs;
     }
