@@ -72,10 +72,10 @@ public class ServerInit {
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
 		if (os.startsWith("linux")) {
             bossGroup = (null==bossGroup) ? new EpollEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup((Integer)prop.getOrDefault("threads", NUM_WORKER_THREADS)):workerGroup;
+            workerGroup = (null==workerGroup) ? new EpollEventLoopGroup(Integer.parseInt((String)prop.getOrDefault("threads", NUM_WORKER_THREADS))):workerGroup;
         } else {
             bossGroup = (null==bossGroup) ? new NioEventLoopGroup(1):bossGroup;
-            workerGroup = (null==workerGroup) ? new NioEventLoopGroup((Integer)prop.getOrDefault("threads", NUM_WORKER_THREADS)):workerGroup;
+            workerGroup = (null==workerGroup) ? new NioEventLoopGroup(Integer.parseInt((String)prop.getOrDefault("threads", NUM_WORKER_THREADS))):workerGroup;
         }
 		
 		String[] servers = prop.getProperty("servers").split(",");
