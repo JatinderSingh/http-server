@@ -8,7 +8,7 @@
 
 	<groupId>io.maelstorm</groupId>
 	<artifactId>maelstorm</artifactId>
-	<version>2.5-Final-SNAPSHOT</version>
+	<version>2.5-CR4-SNAPSHOT</version>
 
 	<name>maelstorm</name>
 	<description>Simple non blocking http server</description>

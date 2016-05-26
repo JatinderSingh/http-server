@@ -54,7 +54,6 @@ public class ServerInit {
 	private static final Logger LOG = LoggerFactory.getLogger(ServerInit.class);
 	private ServerBootstrap controller;
 	private volatile RequestHandler requestDistributor;
-	private EventLoopGroup bossGroup;
 	private EventLoopGroup workerGroup;
 	private static final int NUM_WORKER_THREADS=Math.max(Runtime.getRuntime().availableProcessors()-1, 2);
 	
@@ -71,10 +70,8 @@ public class ServerInit {
 		requestDistributor.setInitializer(this);
 		String os = System.getProperty("os.name").toLowerCase(Locale.UK).trim();
 		if (os.startsWith("linux")) {
-            bossGroup = (null==bossGroup) ? new EpollEventLoopGroup(1):bossGroup;
             workerGroup = (null==workerGroup) ? new EpollEventLoopGroup(Integer.parseInt((String)prop.getOrDefault("threads", Integer.toString(NUM_WORKER_THREADS)))):workerGroup;
         } else {
-            bossGroup = (null==bossGroup) ? new NioEventLoopGroup(1):bossGroup;
             workerGroup = (null==workerGroup) ? new NioEventLoopGroup(Integer.parseInt((String)prop.getOrDefault("threads", Integer.toString(NUM_WORKER_THREADS)))):workerGroup;
         }
 		
@@ -83,7 +80,7 @@ public class ServerInit {
 		
     		try {
     			controller = new ServerBootstrap();
-    			controller.group(bossGroup, workerGroup);
+    			controller.group(workerGroup);
     			if (os.startsWith("linux")) {
     			    controller.channel(EpollServerSocketChannel.class);
     			    controller.option(EpollChannelOption.TCP_CORK, true);
@@ -115,7 +112,6 @@ public class ServerInit {
     			else 
     				throw new Exception("Address already in use");
     		} catch (Throwable t) {
-    			bossGroup.shutdownGracefully();
     			workerGroup.shutdownGracefully();
     			throw new RuntimeException("Initialization failed", t);
     		}
@@ -169,10 +165,6 @@ public class ServerInit {
         InputStream is = this.getClass().getResourceAsStream((configFile==null)?"/config.properties":configFile.isEmpty()?"/config.properties":configFile);
         properties.load(is);
         return properties;
-    }
-
-    protected EventLoopGroup getBossGroup() {
-        return bossGroup;
     }
 	
 	protected EventLoopGroup getWorkerGroup() {
