@@ -19,26 +19,19 @@
  */
 package io.maelstorm.server;
 
+import java.io.File;
+import java.util.Map;
+
+import io.maelstorm.netty.HttpObjectAggregator;
+import io.maelstorm.netty.HttpRequestDecoder;
+import io.maelstorm.server.statistics.StatisticsEndPoint;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.security.KeyStore;
-import java.util.Map;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
-
-import io.maelstorm.netty.HttpObjectAggregator;
-import io.maelstorm.netty.HttpRequestDecoder;
-import io.maelstorm.server.statistics.StatisticsEndPoint;
 
 /**
  * @author Jatinder

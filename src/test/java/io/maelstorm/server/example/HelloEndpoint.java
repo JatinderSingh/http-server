@@ -19,17 +19,19 @@
  */
 package io.maelstorm.server.example;
 
+import com.stumbleupon.async.Deferred;
+
+import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
+import io.maelstorm.server.IEndPoint;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
-import io.maelstorm.server.IEndPoint;
-
-import com.stumbleupon.async.Deferred;
 
 /**
  * @author Jatinder
@@ -40,12 +42,16 @@ import com.stumbleupon.async.Deferred;
 public class HelloEndpoint implements IEndPoint {
 
 	byte[] response = "Hello".getBytes();
+	DefaultHttpHeaders headers = new DefaultHttpHeaders();
+	
+	public HelloEndpoint() {
+		headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+	}
 	
 	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request) {
 		ByteBuf buffer = context.alloc().buffer();
 		buffer.writeBytes(response);
-		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer, false);
-		response.headers().add(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer, headers, EmptyHttpHeaders.INSTANCE);
 		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
 		return deferred;
