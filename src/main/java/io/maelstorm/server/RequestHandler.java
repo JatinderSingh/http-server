@@ -40,7 +40,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
@@ -107,17 +106,13 @@ public abstract class RequestHandler extends ChannelInboundHandlerAdapter implem
 			RequestHandler.initializer = initialiser;
 		}
 	}
-  
+
 	private void sendResponse(final ChannelHandlerContext ctx, final FullHttpResponse response, final HttpRequest request) {
 		ReferenceCountUtil.release(request);
 		if (!ctx.channel().isActive()) {
 			return;
 		}
 		final boolean keepalive = HttpUtil.isKeepAlive(request);
-		if (keepalive) {
-			response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-			response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-		}
 		final ChannelFuture future = ctx.write(response);
 		ctx.flush();
 		if (!keepalive) {

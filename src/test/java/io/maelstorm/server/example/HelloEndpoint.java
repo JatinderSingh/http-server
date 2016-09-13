@@ -24,6 +24,7 @@ import com.stumbleupon.async.Deferred;
 import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 import io.maelstorm.server.IEndPoint;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -32,6 +33,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * @author Jatinder
@@ -41,17 +43,21 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  */
 public class HelloEndpoint implements IEndPoint {
 
-	byte[] response = "Hello".getBytes();
-	DefaultHttpHeaders headers = new DefaultHttpHeaders();
+	final FullHttpResponse response;
+	final byte[] payload = "Hello".getBytes();
 	
 	public HelloEndpoint() {
+		ByteBuf buffer = Unpooled.buffer(5);
+		DefaultHttpHeaders headers = new DefaultHttpHeaders();
 		headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+		headers.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+		response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buffer, headers, EmptyHttpHeaders.INSTANCE);
 	}
 	
 	public Deferred<FullHttpResponse> process(ChannelHandlerContext context, AggregatedFullHttpRequest request) {
-		ByteBuf buffer = context.alloc().buffer();
-		buffer.writeBytes(response);
-		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer, headers, EmptyHttpHeaders.INSTANCE);
+		response.content().writeBytes(payload);
+		response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+		response.retain();
 		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
 		return deferred;
