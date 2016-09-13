@@ -50,7 +50,7 @@ public class HelloEndpoint implements IEndPoint {
 		ByteBuf buffer = Unpooled.buffer(5);
 		DefaultHttpHeaders headers = new DefaultHttpHeaders();
 		headers.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
-		headers.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+		headers.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
 		response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buffer, headers, EmptyHttpHeaders.INSTANCE);
 	}
 	
