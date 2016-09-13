@@ -8,7 +8,7 @@
 
 	<groupId>io.maelstorm</groupId>
 	<artifactId>maelstorm</artifactId>
-	<version>2.5-CR5-SNAPSHOT</version>
+	<version>2.5-CR5</version>
 
 	<name>maelstorm</name>
 	<description>Simple non blocking http server</description>
@@ -18,7 +18,7 @@
 		<url>https://github.com/JatinderSingh/http-server</url>
 		<connection>scm:git:ssh://git@github.com/JatinderSingh/http-server.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/JatinderSingh/http-server.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>maelstorm-2.5-CR5</tag>
 	</scm>
 
 	<properties>
