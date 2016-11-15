@@ -19,15 +19,16 @@
  */
 package io.maelstorm.server;
 
+import com.stumbleupon.async.Deferred;
+
 import io.maelstorm.netty.HttpObjectAggregator.AggregatedFullHttpRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-
-import com.stumbleupon.async.Deferred;
 
 /**
  * @author Jatinder
@@ -42,7 +43,8 @@ public abstract class ShutDownEndpoint extends RequestHandler implements IEndPoi
 		ByteBuf buffer = context.alloc().buffer(resp.length());
 		buffer.writeBytes(resp.getBytes());
 		FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK, buffer);
-		response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html");
+		response.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+		response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 		Deferred<FullHttpResponse> deferred = new Deferred<FullHttpResponse>();
 		deferred.callback(response);
 		shutDownGracefully();
